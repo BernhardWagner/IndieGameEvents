@@ -186,17 +186,18 @@
             }
 
             if(canvas.indieGameEvents.settings.useEightTouchDirections) {
-
+                if(events.indexOf('move-left') && events.indexOf('move-up')|| events.indexOf('move-all')){
+                    dom.directionButtons.leftup = document.createElement('button');
+                    dom.directionButtons.leftup.innerHTML = "🡼";
+                }
             }
 
 
-            dom.directionButtons.leftup = document.createElement('button');
             dom.directionButtons.rightdown = document.createElement('button');
             dom.directionButtons.rightup = document.createElement('button');
             dom.directionButtons.leftdown = document.createElement('button');
 
 
-            dom.directionButtons.leftup.innerHTML = "🡼";
             dom.directionButtons.rightdown.innerHTML = "🡾";
             dom.directionButtons.rightup.innerHTML = "🡽";
             dom.directionButtons.leftdown.innerHTML = "🡿";
