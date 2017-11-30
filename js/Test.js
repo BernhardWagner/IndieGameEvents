@@ -8,7 +8,7 @@ bw.test1 = (function () {
         var canvas = document.getElementById('canvas');
         canvas.registerIndieGameEvents({
             events: ['move-all'],
-            touchDirectionController: 'joystick'
+            touchDirectionController: 'buttons'
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 

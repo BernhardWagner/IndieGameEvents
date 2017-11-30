@@ -392,7 +392,31 @@
 
     //translate the Events of the touch press to abstract events
     function translateDirectionButtonEvents(buttonField) {
-
+        if (isTouchDevice()) {
+            buttonField.addEventListener('touchstart', function(e) {buttonFieldTouchStartAction()});
+            buttonField.addEventListener('touchmove', function(e) {buttonFieldTouchMoveAction()});
+            buttonField.addEventListener('touchend', function(e) {buttonFieldTouchEndAction()});
+        } else if (isPointer()) {
+            buttonField.addEventListener('pointerdown', function(e) {buttonFieldTouchStartAction()});
+            buttonField.addEventListener('pointermove', function(e) {buttonFieldTouchMoveAction()});
+            buttonField.addEventListener('pointerup', function(e) {buttonFieldTouchEndAction()});
+        } else if (isMSPointer()) {
+            buttonField.addEventListener('MSPointerDown', function(e) {buttonFieldTouchStartAction()});
+            buttonField.addEventListener('MSPointerMove', function(e) {buttonFieldTouchMoveAction()});
+            buttonField.addEventListener('MSPointerUp', function(e) {buttonFieldTouchEndAction()});
+        }
+    }
+    
+    function buttonFieldTouchStartAction() {
+        
+    }
+    
+    function buttonFieldTouchMoveAction() {
+        
+    }
+    
+    function buttonFieldTouchEndAction() {
+        
     }
 
 
