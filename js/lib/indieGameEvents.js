@@ -189,34 +189,36 @@
                 if(events.indexOf('move-left') && events.indexOf('move-up')|| events.indexOf('move-all')){
                     dom.directionButtons.leftup = document.createElement('button');
                     dom.directionButtons.leftup.innerHTML = "🡼";
+                    dom.directionButtons.leftup.className += 'leftup-button';
+                    dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftup);
+                }
+
+                if(events.indexOf('move-right') && events.indexOf('move-down')|| events.indexOf('move-all')){
+                    dom.directionButtons.rightdown = document.createElement('button');
+                    dom.directionButtons.rightdown.innerHTML = "🡾";
+                    dom.directionButtons.rightdown.className += 'rightdown-button';
+                    dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightdown);
+                }
+
+                if(events.indexOf('move-right') && events.indexOf('move-up')|| events.indexOf('move-all')){
+                    dom.directionButtons.rightup = document.createElement('button');
+                    dom.directionButtons.rightup.innerHTML = "🡽";
+                    dom.directionButtons.rightup.className += 'rightup-button';
+                    dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightup);
+                }
+
+                if(events.indexOf('move-left') && events.indexOf('move-down')|| events.indexOf('move-all')){
+                    dom.directionButtons.leftdown = document.createElement('button');
+                    dom.directionButtons.leftdown.innerHTML = "🡿";
+                    dom.directionButtons.leftdown.className += 'leftdown-button';
+                    dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftdown);
                 }
             }
 
-
-            dom.directionButtons.rightdown = document.createElement('button');
-            dom.directionButtons.rightup = document.createElement('button');
-            dom.directionButtons.leftdown = document.createElement('button');
-
-
-            dom.directionButtons.rightdown.innerHTML = "🡾";
-            dom.directionButtons.rightup.innerHTML = "🡽";
-            dom.directionButtons.leftdown.innerHTML = "🡿";
-
-
-            dom.directionButtons.leftup.className += 'leftup-button';
-            dom.directionButtons.rightdown.className += 'rightdown-button';
-            dom.directionButtons.rightup.className += 'rightup-button';
-            dom.directionButtons.leftdown.className += 'leftdown-button';
             dom.directionButtons.wrapper.className += 'direction-buttons-wrapper';
-
             setTouchButtonsStyle(dom, buttonSize, buttonMargin);
-
-            dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftup);
-            dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightup);
-            dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftdown);
-            dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightdown);
-
             dom.overlay.appendChild(dom.directionButtons.wrapper);
+            translateDirectionButtonEvents(dom.wrapper);
         }
 
 
@@ -360,16 +362,24 @@
     
     /*touch buttons*/
     function setTouchButtonsStyle(dom, buttonSize, margin) {
-        var buttons, i;
+        var positions = {
+            up: {top: 0, left: (buttonSize + margin * 2)},
+            down: {top: (buttonSize + margin * 2) * 2, left: (buttonSize + margin * 2)},
+            left: {top: (buttonSize + margin * 2), left: 0},
+            right: {top: (buttonSize + margin * 2), left: (buttonSize + margin * 2) * 2},
+            leftup: {top: 0, left: 0},
+            rightdown: {top: (buttonSize + margin * 2) * 2, left: (buttonSize + margin * 2) * 2},
+            rightup: {top: 0, left: (buttonSize + margin * 2) * 2},
+            leftdown: {top: (buttonSize + margin * 2) * 2, left: 0},
+        };
 
         for(var key in dom.directionButtons) {
             if(dom.directionButtons.hasOwnProperty(key)) {
                 if(dom.directionButtons[key] instanceof HTMLButtonElement) {
-                    dom.directionButtons[key].setAttribute("style", "color: white; background-color: black; width:" + buttonSize + "px; height:" + buttonSize + "px; border: none; margin: "+ margin +"px; opacity: 0.5; border-radius: 3px;");
+                    dom.directionButtons[key].setAttribute("style", "position: absolute; color: white; background-color: black; width:" + buttonSize + "px; height:" + buttonSize + "px; border: none; margin: "+ margin +"px; opacity: 0.5; border-radius: 3px; top:" + positions[key].top + "px; left:" + positions[key].left + "px;");
                 }
             }
         }
-
 
         dom.directionButtons.wrapper.setAttribute("style",
             "position: absolute; " +
@@ -378,7 +388,10 @@
             "left:" + 20 + "px; " +
             "bottom:" + 20 + "px;"
         );
+    }
 
+    //translate the Events of the touch press to abstract events
+    function translateDirectionButtonEvents(buttonField) {
 
     }
 
@@ -427,6 +440,7 @@
 //TODO indieEvents settings sind zurzeit lokal, sollte es doch lieber global, sein...macht das sinn?
 //TODO Browser compatibilität testen (vielleicht gibt es tester online?)
 //TODO on controller or keyboard hide touch interface
+//TODO touch listen ansehen!!
 
 
 /*Custom Events (IE support)*/
