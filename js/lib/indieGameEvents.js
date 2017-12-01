@@ -46,7 +46,7 @@
             physicalInput = canvas.indieGameEvents.settings.physicalInputs;
 
         /*directions*/
-        if(events.indexOf('move-all')) {                                                     //for directions (naming scheme with -)
+        if(events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
             registerMoveUp(canvas);
             registerMoveDown(canvas);
             registerMoveLeft(canvas);
@@ -54,19 +54,19 @@
         }
 
         else {
-            if (events.indexOf('move-up')) {
+            if (events.indexOf('move-up') !== -1) {
                 registerMoveUp(canvas);
             }
 
-            if (events.indexOf('move-down')) {
+            if (events.indexOf('move-down') !== -1) {
                 registerMoveDown(canvas);
             }
 
-            if (events.indexOf('move-left')) {
+            if (events.indexOf('move-left') !== -1) {
                 registerMoveLeft(canvas);
             }
 
-            if (events.indexOf('move-right')) {
+            if (events.indexOf('move-right') !== -1) {
                 registerMoveRight(canvas);
             }
         }
@@ -74,7 +74,7 @@
 
 
         /*create an interface for touch devices when the device has an touch input*/
-        if((physicalInput.indexOf('touch') || physicalInput.contains('touchscreen')) && isTouchDevice()) {
+        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
             createTouchInterface(canvas);
         }
     }
@@ -99,6 +99,7 @@
         canvas.indieGameEvents.directions = true;
 
     }
+
     
     
     /*THE TOUCH INTERFACE*/
@@ -120,7 +121,7 @@
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
         if(canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions) {
-            var joystickSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.25, overlayRectSize.height * 0.25)), highestJoystickValue);
+            var joystickSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.3, overlayRectSize.height * 0.3)), highestJoystickValue);
             //creates the dom objects for the joystick.
             //console.log(joystickSize);
             dom.joystick = {};
@@ -153,73 +154,87 @@
 
         /* if we use buttons for the touch movements */
         else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions) {
-            var buttonSize = 50, buttonMargin = 2;
+            var buttonSize = 75, buttonMargin = 2, buttonEvents;
 
             dom.directionButtons = {};
             dom.directionButtons.wrapper = document.createElement('div');
-
-            if(events.indexOf('move-up') || events.indexOf('move-all')) {
+                console.log(events.indexOf('move-up'));
+            if(events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.up = document.createElement('button');
                 dom.directionButtons.up.innerHTML = "🡹";
-                dom.directionButtons.up.className +=  'up-button';
+                dom.directionButtons.up.name += dom.directionButtons.up.className +=  'up-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.up);
             }
-            if(events.indexOf('move-down') || events.indexOf('move-all')) {
+            if(events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.down = document.createElement('button');
                 dom.directionButtons.down.innerHTML = "🡻";
-                dom.directionButtons.down.className += 'down-button';
+                dom.directionButtons.down.name += dom.directionButtons.down.className += 'down-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.down);
             }
 
-            if(events.indexOf('move-left') || events.indexOf('move-all')){
+            if(events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1){
                 dom.directionButtons.left = document.createElement('button');
                 dom.directionButtons.left.innerHTML = "🡸";
-                dom.directionButtons.left.className += 'left-button';
+                dom.directionButtons.left.name += dom.directionButtons.left.className += 'left-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.left);
             }
 
-            if(events.indexOf('move-right') || events.indexOf('move-all')){
+            if(events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1){
                 dom.directionButtons.right = document.createElement('button');
                 dom.directionButtons.right.innerHTML = "🡺";
-                dom.directionButtons.right.className += 'right-button';
+                dom.directionButtons.right.name += dom.directionButtons.right.className += 'right-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.right);
             }
 
             if(canvas.indieGameEvents.settings.useEightTouchDirections) {
-                if(events.indexOf('move-left') && events.indexOf('move-up')|| events.indexOf('move-all')){
+                if(events.indexOf('move-left') !== -1 && events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1){
                     dom.directionButtons.leftup = document.createElement('button');
                     dom.directionButtons.leftup.innerHTML = "🡼";
-                    dom.directionButtons.leftup.className += 'leftup-button';
+                    dom.directionButtons.leftup.name += dom.directionButtons.leftup.className += 'leftup-button';
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftup);
                 }
 
-                if(events.indexOf('move-right') && events.indexOf('move-down')|| events.indexOf('move-all')){
+                if(events.indexOf('move-right') !== -1 && events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1 ){
                     dom.directionButtons.rightdown = document.createElement('button');
                     dom.directionButtons.rightdown.innerHTML = "🡾";
-                    dom.directionButtons.rightdown.className += 'rightdown-button';
+                    dom.directionButtons.rightdown.name += dom.directionButtons.rightdown.className += 'rightdown-button';
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightdown);
                 }
 
-                if(events.indexOf('move-right') && events.indexOf('move-up')|| events.indexOf('move-all')){
+                if(events.indexOf('move-right') !== -1 && events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1){
                     dom.directionButtons.rightup = document.createElement('button');
                     dom.directionButtons.rightup.innerHTML = "🡽";
-                    dom.directionButtons.rightup.className += 'rightup-button';
+                    dom.directionButtons.rightup.name += dom.directionButtons.rightup.className += 'rightup-button';
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightup);
                 }
 
-                if(events.indexOf('move-left') && events.indexOf('move-down')|| events.indexOf('move-all')){
+                if(events.indexOf('move-left') !== -1 && events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1){
                     dom.directionButtons.leftdown = document.createElement('button');
                     dom.directionButtons.leftdown.innerHTML = "🡿";
-                    dom.directionButtons.leftdown.className += 'leftdown-button';
+                    dom.directionButtons.leftdown.name += dom.directionButtons.leftdown.className += 'leftdown-button';
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftdown);
                 }
             }
 
+            buttonEvents = {
+                "up-button": ["move-up"],
+                "down-button": ["move-down"],
+                "left-button": ["move-left"],
+                "right-button": ["move-right"],
+                "leftup-button": ["move-left", "move-up"],
+                "rightup-button": ["move-right", "move-up"],
+                "leftdown-button": ["move-left", "move-down"],
+                "rightdown-button": ["move-right", "move-down"]
+
+            };
+
             dom.directionButtons.wrapper.className += 'direction-buttons-wrapper';
-            setTouchButtonsStyle(dom, buttonSize, buttonMargin);
+            setTouchButtonsStyle(dom, buttonSize, buttonMargin, events);
             dom.overlay.appendChild(dom.directionButtons.wrapper);
-            translateDirectionButtonEvents(dom.wrapper);
+            translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
         }
+
+       // if(events.indexOf('action-1'))
 
 
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
@@ -319,8 +334,8 @@
         var parentPosition = e.target.offsetParent.getBoundingClientRect() || e.changedTouches[0].target.offsetParent.getBoundingClientRect();
 
         return {
-            outerCircle : e.target.offsetParent.firstChild || e.changedTouches[0].pageX.target.offsetParent.firstChild,     //always take the first touch
-            innerCircle : e.target.offsetParent.lastChild || e.changedTouches[0].pageX.target.offsetParent.lastChild,
+            outerCircle : e.target.offsetParent.firstChild || e.changedTouches[0].target.offsetParent.firstChild,     //always take the first touch (ignore multitouch for this element)
+            innerCircle : e.target.offsetParent.lastChild || e.changedTouches[0].target.offsetParent.lastChild,
             parentPosition :  parentPosition,
             midPoint : {x: parentPosition.width /2, y: parentPosition.height / 2},
             xPos : (e.pageX || e.changedTouches[0].pageX) - parentPosition.x,
@@ -337,36 +352,45 @@
         if(distance > data.parentPosition.width/9) {
             var angle = getAngle(data.midPoint, touchPoint);
 
-            if(angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') || events.indexOf('move-all'))){
+            if(angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)){
                 //console.log('right');
                 canvas.dispatchEvent(new CustomEvent('move-right', {detail: {strength: strength}}));
             }
 
-            if(angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') || events.indexOf('move-all'))){
+            if(angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)){
                // console.log('down');
                 canvas.dispatchEvent(new Event('move-down', {detail: {strength: strength}}));
             }
 
-            if(((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') || events.indexOf('move-all'))) {
+            if(((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
                 //console.log('left');
-                canvas.dispatchEvent(new Event('move-left', {detail: {strength: strength}}))
+                canvas.dispatchEvent(new Event('move-left', {detail: {strength: strength}}));
             }
 
-            if(angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') || events.indexOf('move-all'))) {
+            if(angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
                 //console.log('up');
-                canvas.dispatchEvent(new Event('move-up', {detail: {strength: strength}}))
+                canvas.dispatchEvent(new Event('move-up', {detail: {strength: strength}}));
             }
         }
     }
     
     
     /*touch buttons*/
-    function setTouchButtonsStyle(dom, buttonSize, margin) {
-        var positions = {
+    function setTouchButtonsStyle(dom, buttonSize, margin, events) {
+        var positions, leftRightBig = 0, upDownBig = 0;
+        
+        if(!(dom.directionButtons.rightup || dom.directionButtons.up || dom.directionButtons.leftup || dom.directionButtons.leftdown || dom.directionButtons.down || dom.directionButtons.rightdown)) {
+            leftRightBig = buttonSize;
+        }
+        else if(!(dom.directionButtons.rightup || dom.directionButtons.right || dom.directionButtons.leftup || dom.directionButtons.leftdown || dom.directionButtons.left || dom.directionButtons.rightdown)) {
+            upDownBig = buttonSize;
+        }
+
+        positions = {
             up: {top: 0, left: (buttonSize + margin * 2)},
-            down: {top: (buttonSize + margin * 2) * 2, left: (buttonSize + margin * 2)},
+            down: {top: (buttonSize + margin * 2) * 2 - upDownBig/4, left: (buttonSize + margin * 2)},
             left: {top: (buttonSize + margin * 2), left: 0},
-            right: {top: (buttonSize + margin * 2), left: (buttonSize + margin * 2) * 2},
+            right: {top: (buttonSize + margin * 2), left: (buttonSize + margin * 2) * 2 - leftRightBig/4},
             leftup: {top: 0, left: 0},
             rightdown: {top: (buttonSize + margin * 2) * 2, left: (buttonSize + margin * 2) * 2},
             rightup: {top: 0, left: (buttonSize + margin * 2) * 2},
@@ -376,7 +400,7 @@
         for(var key in dom.directionButtons) {
             if(dom.directionButtons.hasOwnProperty(key)) {
                 if(dom.directionButtons[key] instanceof HTMLButtonElement) {
-                    dom.directionButtons[key].setAttribute("style", "position: absolute; color: white; background-color: black; width:" + buttonSize + "px; height:" + buttonSize + "px; border: none; margin: "+ margin +"px; opacity: 0.5; border-radius: 3px; top:" + positions[key].top + "px; left:" + positions[key].left + "px;");
+                    dom.directionButtons[key].setAttribute("style", "position: absolute; color: white; background-color: black; width:" + (buttonSize + leftRightBig/4 + upDownBig * 2) + "px; height:" + (buttonSize + (leftRightBig * 2) + upDownBig/4) + "px; border: none; margin: "+ margin +"px; opacity: 0.5; border-radius: 3px; top:" + (positions[key].top - leftRightBig) + "px; left:" + (positions[key].left - upDownBig) + "px;");
                 }
             }
         }
@@ -391,32 +415,48 @@
     }
 
     //translate the Events of the touch press to abstract events
-    function translateDirectionButtonEvents(buttonField) {
+    function translateDirectionButtonEvents(buttonField, buttonEvents, canvas) {
         if (isTouchDevice()) {
-            buttonField.addEventListener('touchstart', function(e) {buttonFieldTouchStartAction()});
-            buttonField.addEventListener('touchmove', function(e) {buttonFieldTouchMoveAction()});
-            buttonField.addEventListener('touchend', function(e) {buttonFieldTouchEndAction()});
+            buttonField.addEventListener('touchstart', function(e) {buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)});
+           // buttonField.addEventListener('touchmove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
+            buttonField.addEventListener('touchend', function(e) {buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)});
         } else if (isPointer()) {
-            buttonField.addEventListener('pointerdown', function(e) {buttonFieldTouchStartAction()});
-            buttonField.addEventListener('pointermove', function(e) {buttonFieldTouchMoveAction()});
-            buttonField.addEventListener('pointerup', function(e) {buttonFieldTouchEndAction()});
+            buttonField.addEventListener('pointerdown', function(e) {buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)});
+           // buttonField.addEventListener('pointermove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
+            buttonField.addEventListener('pointerup', function(e) {buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)});
         } else if (isMSPointer()) {
-            buttonField.addEventListener('MSPointerDown', function(e) {buttonFieldTouchStartAction()});
-            buttonField.addEventListener('MSPointerMove', function(e) {buttonFieldTouchMoveAction()});
-            buttonField.addEventListener('MSPointerUp', function(e) {buttonFieldTouchEndAction()});
+            buttonField.addEventListener('MSPointerDown', function(e) {buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)});
+          //  buttonField.addEventListener('MSPointerMove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
+            buttonField.addEventListener('MSPointerUp', function(e) {buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)});
         }
     }
     
-    function buttonFieldTouchStartAction() {
-        
+    function buttonFieldTouchStartAction(e,buttonField, canvas, buttonEvents) {
+     var target = prepareTarget(e);
+
+        if(!buttonField.eventDispatcherID){
+            buttonField.eventDispatcherID = window.requestAnimationFrame(function() {dispatchMoveButtonEvents(target, canvas, buttonEvents, buttonField)});           //only one touch counts
+        }
     }
     
-    function buttonFieldTouchMoveAction() {
-        
+    function buttonFieldTouchEndAction(e, buttonField) {
+        window.cancelAnimationFrame(buttonField.eventDispatcherID);
+        buttonField.eventDispatcherID = null;
     }
     
-    function buttonFieldTouchEndAction() {
-        
+    function dispatchMoveButtonEvents(target, canvas, buttonEvents, buttonField) {
+
+        if(target.name){
+            for(var key in buttonEvents[target.name]) {
+                if(buttonEvents[target.name].hasOwnProperty(key)){
+                    canvas.dispatchEvent(new Event(buttonEvents[target.name][key]));
+                }
+            }
+        }
+
+        if(buttonField.eventDispatcherID) {
+            window.requestAnimationFrame(function() { dispatchMoveButtonEvents(target, canvas, buttonEvents, buttonField) });
+        }
     }
 
 
@@ -449,6 +489,10 @@
         var dy = p2.y - p1.y;
 
         return Math.sqrt((dx * dx) + (dy * dy));
+    }
+
+    function prepareTarget(e) {
+        return  e.target || e.changedTouches[0].target;
     }
 
 
