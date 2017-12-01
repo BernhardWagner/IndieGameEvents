@@ -154,11 +154,10 @@
 
         /* if we use buttons for the touch movements */
         else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions) {
-            var buttonSize = 75, buttonMargin = 2, buttonEvents;
+            var directionButtonSize = 75, directionButtonMargin = 2, buttonEvents;
 
             dom.directionButtons = {};
             dom.directionButtons.wrapper = document.createElement('div');
-                console.log(events.indexOf('move-up'));
             if(events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.up = document.createElement('button');
                 dom.directionButtons.up.innerHTML = "🡹";
@@ -229,19 +228,34 @@
             };
 
             dom.directionButtons.wrapper.className += 'direction-buttons-wrapper';
-            setTouchButtonsStyle(dom, buttonSize, buttonMargin, events);
+            setTouchDirectionButtonsStyle(dom, directionButtonSize, directionButtonMargin, events);
             dom.overlay.appendChild(dom.directionButtons.wrapper);
             translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
         }
 
-       // if(events.indexOf('action-1'))
+       if(events.indexOf('action-1') !== -1 || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
+           var smallestActionButtonValue = 60, highestActionButtonValue = 100, actionButtonSize;
+
+           actionButtonSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.15, overlayRectSize.height * 0.15)), highestJoystickValue);
+
+           dom.actionButtons = {};
+           
+           dom.actionButtons.wrapper = document.createElement('div');
+           dom.actionButtons.wrapper.className += 'action-buttons-wrapper';
+
+           //TODO create button elements
+
+           setActionButtonsStyle(dom.actionButtons, actionButtonSize, directionButtonMargin);
+       }
 
 
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
     }
 
 
+    function setActionButtonsStyle(actionButtons, actionButtonSize, directionButtonMargin) {
 
+    }
 
 
     function setTouchOverlayStyle(overlayRectSize, dom) {
@@ -252,7 +266,8 @@
             "position: absolute; " +
             "z-index: 200; " +
             "left:" + overlayRectSize.left + "px; " +
-            "top:" + overlayRectSize.top + "px; "
+            "top:" + overlayRectSize.top + "px; " +
+            "pointer-events: none;"
         );
     }
 
@@ -263,7 +278,8 @@
             "height:" + joystickSize + "px; " +
             "left:" + 20 + "px; " +
             "bottom:" + 20 + "px; " +
-            "border-radius: 50%;"
+            "border-radius: 50%;" +
+            "pointer-events: all;"
         );
 
         dom.joystick.outerCircle.setAttribute("style", "border-radius: 50%; width: 100%; height: 100%; position: absolute; background: black; opacity: 0.4;");                  //joystick values can be styled from outside with !important
@@ -376,7 +392,7 @@
     
     
     /*touch buttons*/
-    function setTouchButtonsStyle(dom, buttonSize, margin, events) {
+    function setTouchDirectionButtonsStyle(dom, buttonSize, margin, events) {
         var positions, leftRightBig = 0, upDownBig = 0;
         
         if(!(dom.directionButtons.rightup || dom.directionButtons.up || dom.directionButtons.leftup || dom.directionButtons.leftdown || dom.directionButtons.down || dom.directionButtons.rightdown)) {
@@ -407,10 +423,11 @@
 
         dom.directionButtons.wrapper.setAttribute("style",
             "position: absolute; " +
-            "width:" + (buttonSize + 2* margin) * 3 + "px; " +
-            "height:" + (buttonSize + 2* margin) * 3 + "px; " +
+            "width:" + (buttonSize + 2 * margin) * 3 + "px; " +
+            "height:" + (buttonSize + 2 * margin) * 3 + "px; " +
             "left:" + 20 + "px; " +
-            "bottom:" + 20 + "px;"
+            "bottom:" + 20 + "px;" +
+            "pointer-events: all;"
         );
     }
 
@@ -509,6 +526,7 @@
 //TODO Browser compatibilität testen (vielleicht gibt es tester online?)
 //TODO on controller or keyboard hide touch interface
 //TODO touch listen ansehen!!
+//TODO nicht css pointer events vergessen bei den wrappern
 
 
 /*Custom Events (IE support)*/
