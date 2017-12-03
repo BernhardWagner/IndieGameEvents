@@ -14,10 +14,9 @@
 (function () {
     //standard settings for the library
     var _standardSettings,
-
-
     //Add Hammer.js to library
-     _Hammer = Hammer;
+     _Hammer = Hammer,
+        _gamepads;
 
 
     //sets the standard settings that will be overwritten with the settings object of the user
@@ -54,6 +53,10 @@
             menuButton: settings.menuButton || _standardSettings.menuButton,
 
         };
+
+        _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+
+        //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
 
         this.indieGameEvents.hammer = new _Hammer(this, {
             pinch: true
@@ -139,7 +142,7 @@
 
 
         /*create an interface for touch devices when the device has an touch input*/
-        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
+        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice() && !isGamepadConnected()) {
             createTouchInterface(canvas);
         }
     }
@@ -866,6 +869,19 @@
         return event;
     }
 
+    /*https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API*/
+    /*Checks if at least one gamepad is connected*/
+    function isGamepadConnected() {
+        if(_gamepads){
+            for (var i = 0; i < _gamepads.length; i++) {
+                if(_gamepads[i]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 
     /*to map numbers to a specific range*/
     Number.prototype.map = function (in_min, in_max, out_min, out_max) {
@@ -875,7 +891,6 @@
 
 })();
 
-//TODO ms pointer ansehen
 //TODO indieEvents settings sind zurzeit lokal, sollte es doch lieber global, sein...macht das sinn?
 //TODO Browser compatibilität testen (vielleicht gibt es tester online?)
 //TODO on controller or keyboard hide touch interface
