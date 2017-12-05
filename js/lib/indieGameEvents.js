@@ -30,7 +30,8 @@
         joystickType: 'static',                                                                        //when a joystick is used there are two types static and dynamic (generates joystick on touch)
         doubleTabAction1: false,                                                                    //when double tabbed on the screen the action 1 event will be triggered and on the touch interface the action 1 button does not appear
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
-        menuButton: true                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
+        menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
+        useGyroscope: false                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
     };
 
     HTMLCanvasElement.prototype.registerIndieGameEvents = function (settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
@@ -51,6 +52,7 @@
             doubleTapAction1: settings.doubleTabAction1 || _standardSettings.doubleTabAction1,
             touchDismissButton: settings.touchDismissButton || _standardSettings.touchDismissButton,
             menuButton: settings.menuButton || _standardSettings.menuButton,
+            useGyroscope: settings.useGyroscope || _standardSettings.useGyroscope,
 
         };
 
@@ -61,7 +63,6 @@
         this.indieGameEvents.hammer = new _Hammer(this, {
             pinch: true
         });
-
 
 
         eventTranslator(this);                                                              //main function, translates the physical events to the right events
@@ -139,10 +140,12 @@
             }
         }
 
-
+        if(canvas.indieGameEvents.settings.useGyroscope === true) { //TODO gyroscope erkennen
+            //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders)
+        }
 
         /*create an interface for touch devices when the device has an touch input*/
-        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice() && !isGamepadConnected()) {
+        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice() && !isGamepadConnected() && canvas.indieGameEvents.settings.useGyroscope === false) {
             createTouchInterface(canvas);
         }
     }
@@ -899,6 +902,7 @@
 //TODO hochformat und querformat bei touch interface beachten
 //TODO scrollen und drehen nicht vergessen
 //TODO swipe for movements?
+//TODO gyroscope?
 
 /*Custom Events (IE support)*/
 (function () {
