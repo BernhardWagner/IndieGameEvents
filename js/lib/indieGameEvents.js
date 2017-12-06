@@ -190,15 +190,8 @@
 
         /*touch*/
         hammer.on('pinch', function (e) {
-            if(e.additionalEvent === 'pinchout') {
-                event = new CustomEvent('zoom-in');
-                event.scale = e.scale;
-                event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
-                canvas.dispatchEvent(event);
-            }
-
-            else if(e.additionalEvent === 'pinchin') {
-                event = new CustomEvent('zoom-out');
+            if(e.scale > 1.1 ||e.scale < 0.9) {
+                event = new CustomEvent('zoom');
                 event.scale = e.scale;
                 event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
                 canvas.dispatchEvent(event);
@@ -213,7 +206,11 @@
 
     /* ROTATION */
     function registerRotate(canvas, boundingRect) {
+        var hammer = canvas.indieGameEvents.hammer;
 
+        hammer.on('rotate', function (e) {
+           console.log(e);
+        });
     }
 
 
