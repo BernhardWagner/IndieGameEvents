@@ -134,19 +134,24 @@
             }
         }
 
+        if(events.indexOf())
+
         gyroMode = false;
 
-        /*if gyroscopoe is set in the settings and a gyroscope and touch is detected, then use it else create the touch interface*/
-        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
-            gyroMode = true;
-            registerGyroscope(canvas);
-            //https://github.com/tomgco/gyro.js
-            //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders)
-        }
+        /* touch */
+        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
+            /*if gyroscopoe is set in the settings and a gyroscope and touch is detected, then use it else create the touch interface*/
+            if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
+                gyroMode = true;
+                registerGyroscope(canvas);
+                //https://github.com/tomgco/gyro.js
+                //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders)
+            }
 
-        /*create an interface for touch devices when the device has an touch input*/
-        else if ((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice() && !isGamepadConnected()) {
-            createTouchInterface(canvas);
+            /*create an interface for touch devices when the device has an touch input*/
+            if (!isGamepadConnected()) {
+                createTouchInterface(canvas);
+            }
         }
     }
 
