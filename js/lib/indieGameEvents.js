@@ -3,7 +3,7 @@
 //TODO add external libraries
 
 //OWN LIBRARY
-//self invoking functions und closures erklären?
+//self invoking functions und closures erklären (JA)
 (function () {
     //standard settings for the library
     var _standardSettings,
