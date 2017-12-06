@@ -54,8 +54,9 @@
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
 
-        this.indieGameEvents.hammer = new _Hammer(this); //registers Hammer.js for the canvas
+        this.indieGameEvents.hammer = new _Hammer(this, {preventDefault: true}); //registers Hammer.js for the canvas
         this.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
+        this.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
 
 
         eventTranslator(this);                                                              //main function, translates the physical events to the right events
@@ -186,30 +187,47 @@
     /* ZOOMING */
     function registerZoom(canvas, boundingRect) {
         var hammer = canvas.indieGameEvents.hammer,
-            event;
+            event,
+            lastScale;
+
+        event = new CustomEvent('zoom');
 
         /*touch*/
-        hammer.on('pinch', function (e) {
-            if(e.scale > 1.1 ||e.scale < 0.9) {
-                event = new CustomEvent('zoom');
-                event.scale = e.scale;
+        hammer.on('pinchstart', function (e) {
+            lastScale = e.scale;
+        });
+
+        hammer.on('pinchmove', function (e) {
+            console.log(lastScale);
+                event.scale = e.scale - lastScale;                                                          //relative scale value (positive on zoom in and negative on zoom out)
+                lastScale = e.scale;
                 event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
                 canvas.dispatchEvent(event);
-            }
         });
 
         //TODO zoom on keyboard must be different then the native chrome and zoom
         //TODO strg scroll
         //TODO zoom buttons on touch interface? (controller l1 r1 ?)
-        //TODO bei tastatur scale wert ist 1.5
+        //TODO bei tastatur scale wert ist +0.5 und -0.5
     }
 
     /* ROTATION */
     function registerRotate(canvas, boundingRect) {
-        var hammer = canvas.indieGameEvents.hammer;
+        var hammer = canvas.indieGameEvents.hammer,
+            event,
+            lastRotation;
 
-        hammer.on('rotate', function (e) {
-           console.log(e);
+        /*touch*/
+        event = new CustomEvent('rotate');
+
+        hammer.on('rotatestart', function (e) {
+           lastRotation = e.rotation;
+        });
+
+        hammer.on('rotatemove', function (e) {
+            event.rotation = e.rotation - lastRotation;               //relative rotation value
+            lastRotation = e.rotation;
+            canvas.dispatchEvent(event);
         });
     }
 
@@ -1038,6 +1056,7 @@
 //TODO scrollen und drehen nicht vergessen
 //TODO swipe for movements?
 //TODO gyroscope?
+//TODO fullscreen?
 
 /*Custom Events (IE support)*/
 (function () {
