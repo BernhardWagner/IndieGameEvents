@@ -54,9 +54,8 @@
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
 
-        this.indieGameEvents.hammer = new _Hammer(this, {                                   //registers Hammer.js
-            pinch: true
-        });
+        this.indieGameEvents.hammer = new _Hammer(this); //registers Hammer.js for the canvas
+        this.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
 
 
         eventTranslator(this);                                                              //main function, translates the physical events to the right events
@@ -106,7 +105,8 @@
     /*MAIN*/
     function eventTranslator(canvas) {
         var events = canvas.indieGameEvents.settings.events,
-            physicalInput = canvas.indieGameEvents.settings.physicalInputs;
+            physicalInput = canvas.indieGameEvents.settings.physicalInputs,
+            boundingRect = canvas.getBoundingClientRect();
 
         /*directions*/
         if (events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
@@ -134,7 +134,13 @@
             }
         }
 
-        if(events.indexOf())
+        if(events.indexOf('zoom') !== -1) {
+            registerZoom(canvas, boundingRect);
+        }
+
+        if(events.indexOf('rotate') !== -1) {
+            registerRotate(canvas, boundingRect);
+        }
 
         gyroMode = false;
 
@@ -150,7 +156,7 @@
 
             /*create an interface for touch devices when the device has an touch input*/
             if (!isGamepadConnected()) {
-                createTouchInterface(canvas);
+                createTouchInterface(canvas, boundingRect);
             }
         }
     }
@@ -177,6 +183,40 @@
     }
 
 
+    /* ZOOMING */
+    function registerZoom(canvas, boundingRect) {
+        var hammer = canvas.indieGameEvents.hammer,
+            event;
+
+        /*touch*/
+        hammer.on('pinch', function (e) {
+            if(e.additionalEvent === 'pinchout') {
+                event = new CustomEvent('zoom-in');
+                event.scale = e.scale;
+                event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
+                canvas.dispatchEvent(event);
+            }
+
+            else if(e.additionalEvent === 'pinchin') {
+                event = new CustomEvent('zoom-out');
+                event.scale = e.scale;
+                event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
+                canvas.dispatchEvent(event);
+            }
+        });
+
+        //TODO zoom on keyboard must be different then the native chrome and zoom
+        //TODO strg scroll
+        //TODO zoom buttons on touch interface? (controller l1 r1 ?)
+        //TODO bei tastatur scale wert ist 1.5
+    }
+
+    /* ROTATION */
+    function registerRotate(canvas, boundingRect) {
+
+    }
+
+
     /*GYROSCOPE*/
     function registerGyroscope(canvas) {
 
@@ -184,10 +224,10 @@
 
 
     /*THE TOUCH INTERFACE*/
-    function createTouchInterface(canvas) {                                                                 //Touch interface will be overlaid over the canvas
+    function createTouchInterface(canvas, boundingRect) {                                                                 //Touch interface will be overlaid over the canvas
         var smallestJoystickValue = 100,    //min and max values so the touchpad isnt to big or small
             highestJoystickValue = 350,
-            overlayRectSize = canvas.getBoundingClientRect(),                                                //gets the correct overlayRect position and size;
+            overlayRectSize = boundingRect,                                                //gets the correct overlayRect position and size;
             events = canvas.indieGameEvents.settings.events;
 
         /*object for the touch interface*/
@@ -751,29 +791,38 @@
         var touchPoint = {x: data.xPos, y: data.yPos},
             events = canvas.indieGameEvents.settings.events,
             distance = getDistance(touchPoint, data.midPoint),
-            strength = ~~distance.map(0, data.midPoint.x, 0, 100);
+            strength = ~~distance.map(0, data.midPoint.x, 0, 100),
+            event;
 
         if (distance > data.parentPosition.width / 9) {
             var angle = getAngle(data.midPoint, touchPoint);
 
             if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
                 //console.log('right');
-                canvas.dispatchEvent(new CustomEvent('move-right', {detail: {strength: strength}}));
+                event = new CustomEvent('move-right');
+                event.strength = strength;
+                canvas.dispatchEvent(event);
             }
 
             if (angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
                 // console.log('down');
-                canvas.dispatchEvent(new CustomEvent('move-down', {detail: {strength: strength}}));
+                event = new CustomEvent('move-down');
+                event.strength = strength;
+                canvas.dispatchEvent(event);
             }
 
             if (((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
                 //console.log('left');
-                canvas.dispatchEvent(new CustomEvent('move-left', {detail: {strength: strength}}));
+                event = new CustomEvent('move-left');
+                event.strength = strength;
+                canvas.dispatchEvent(event);
             }
 
             if (angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
                 //console.log('up');
-                canvas.dispatchEvent(new CustomEvent('move-up', {detail: {strength: strength}}));
+                event = new CustomEvent('move-up');
+                event.strength = strength;
+                canvas.dispatchEvent(event);
             }
         }
     }
