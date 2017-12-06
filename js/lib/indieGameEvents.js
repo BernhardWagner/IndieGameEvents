@@ -54,7 +54,7 @@
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
 
-        this.indieGameEvents.hammer = new _Hammer(this, {
+        this.indieGameEvents.hammer = new _Hammer(this, {                                   //registers Hammer.js
             pinch: true
         });
 
@@ -137,7 +137,7 @@
         gyroMode = false;
 
         /*if gyroscopoe is set in the settings and a gyroscope and touch is detected, then use it else create the touch interface*/
-        if (canvas.indieGameEvents.settings.useGyroscope === true) { //TODO gyroscope erkennen
+        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
             gyroMode = true;
             registerGyroscope(canvas);
             //https://github.com/tomgco/gyro.js
