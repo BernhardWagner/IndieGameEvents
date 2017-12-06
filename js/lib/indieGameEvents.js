@@ -198,7 +198,6 @@
         });
 
         hammer.on('pinchmove', function (e) {
-            console.log(lastScale);
                 event.scale = e.scale - lastScale;                                                          //relative scale value (positive on zoom in and negative on zoom out)
                 lastScale = e.scale;
                 event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};

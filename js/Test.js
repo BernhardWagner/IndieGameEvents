@@ -13,17 +13,6 @@ bw.test1 = (function () {
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 
-        var scale = 1;
-
-        draw();
-        function draw() {
-            //canvas.width = canvas.width;
-            ctx.rect(200,200,150 * scale ,100 * scale);
-            ctx.stroke();
-
-            requestAnimationFrame(draw);
-        }
-
         var mc = new Hammer(canvas);
 
         //canvas.hideIndieGameTouchInterfaceWithoutX();
@@ -46,13 +35,6 @@ bw.test1 = (function () {
             console.log('map-opened')
         });
 */
-        canvas.addEventListener('zoom', function (e) {
-            scale += e.scale;
-        });
-
-        canvas.addEventListener('rotate', function (e) {
-           // console.log(e.rotation);
-        });
 
         var i = 0;
 
