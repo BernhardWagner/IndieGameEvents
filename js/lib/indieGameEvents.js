@@ -64,8 +64,6 @@
 
         };
 
-        this.indieGameEvents.gyroMode = false;  //is gyroscope on or not
-
         _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
@@ -160,7 +158,6 @@
 
         //if gyroscope mode is enabled
         if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) {
-            canvas.indieGameEvents.gyroMode = true;
             registerGyroscope(canvas);
             //https://github.com/tomgco/gyro.js
             //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders deswegen gyronorm.js)
@@ -250,9 +247,9 @@
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
                 if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) || _gn.isAvailable(GyroNorm.DEVICE_ORIENTATION)) {
                         //TODO hide gamepad or direction buttons
-                    canvas.indieGameEvents.gyroMode = true;
+
                 } else {
-                    canvas.indieGameEvents.gyroMode = false;
+
                 }
             });
         });
@@ -276,7 +273,7 @@
         setTouchOverlayStyle(overlayRectSize, dom);                                                          //to position the overlay
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
-        if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions && !canvas.indieGameEvents.gyroMode) {
+        if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions) {
             var joystickSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.3, overlayRectSize.height * 0.3)), highestJoystickValue);
             //creates the dom objects for the joystick.
             //console.log(joystickSize);
@@ -327,7 +324,7 @@
         }
 
         /* if we use buttons for the touch movements */
-        else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions && !canvas.indieGameEvents.gyroMode) {
+        else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions) {
             var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 110,
                 directionButtonMargin = 2, buttonEvents;
 
