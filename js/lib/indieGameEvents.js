@@ -27,7 +27,7 @@
         doubleTabAction1: false,                                                                    //when double tabbed on the screen the action 1 event will be triggered and on the touch interface the action 1 button does not appear
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
-        useGyroscope: false                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
+        useGyroscope: true                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
     };
 
 
@@ -37,7 +37,7 @@
      _gyroSettings = {
          frequency: 200,
          gravityNormalized:true,
-         orientationBase:GyroNorm.GAME,
+         orientationBase:GyroNorm.WORLD,
          decimalCount:2,
      };
 
@@ -158,8 +158,8 @@
             registerRotate(canvas, boundingRect);
         }
 
-        //if gyroscope mode is enabled and gyroscope is detected
-        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
+        //if gyroscope mode is enabled
+        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) {
             canvas.indieGameEvents.gyroMode = true;
             registerGyroscope(canvas);
             //https://github.com/tomgco/gyro.js
@@ -247,7 +247,13 @@
     function registerGyroscope(canvas) {
         _gn.init(_gyroSettings).then(function() {
             _gn.start(function(data){
-                console.log(data.do.alpha);
+                //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) || _gn.isAvailable(GyroNorm.DEVICE_ORIENTATION)) {
+                        //TODO hide gamepad or direction buttons
+                    canvas.indieGameEvents.gyroMode = true;
+                } else {
+                    canvas.indieGameEvents.gyroMode = false;
+                }
             });
         });
     }
@@ -268,7 +274,6 @@
         dom.overlay.className += 'touchInterface';
 
         setTouchOverlayStyle(overlayRectSize, dom);                                                          //to position the overlay
-
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
         if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions && !canvas.indieGameEvents.gyroMode) {
