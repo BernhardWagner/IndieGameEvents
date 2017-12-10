@@ -16,7 +16,7 @@ bw.test1 = (function () {
         var mc = new Hammer(canvas);
 
         //canvas.hideIndieGameTouchInterfaceWithoutX();
-        /*
+/*
         canvas.addEventListener('move-right', function (e) {
            console.log("right");
            console.log(e);
@@ -33,8 +33,8 @@ bw.test1 = (function () {
 
         canvas.addEventListener('open-map', function () {
             console.log('map-opened')
-        });
-*/
+        });*/
+
 
         var i = 0;
 

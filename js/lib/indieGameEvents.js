@@ -5,12 +5,14 @@
 //OWN LIBRARY
 //self invoking functions und closures erklären (JA)
 (function () {
+    /*GLOBALS*/
     //standard settings for the library
     var _standardSettings,
         //Add Hammer.js to library
-        _Hammer = Hammer,
+        _Hammer = Hammer,  /* hammer js */
         _gamepads,
-        gyroMode;
+        _gn,            /* gyronorm js normalises gyroscope values */
+        _gyroSettings;
 
 
     //sets the standard settings that will be overwritten with the settings object of the user
@@ -27,6 +29,18 @@
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
         useGyroscope: false                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
     };
+
+
+    /*init of gyronorm.js*/
+     _gn = new GyroNorm();
+
+     _gyroSettings = {
+         frequency: 200,
+         gravityNormalized:true,
+         orientationBase:GyroNorm.GAME,
+         decimalCount:2,
+     };
+
 
     HTMLCanvasElement.prototype.registerIndieGameEvents = function (settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
         //"this" is the canvasElement
@@ -50,6 +64,8 @@
 
         };
 
+        this.indieGameEvents.gyroMode = false;  //is gyroscope on or not
+
         _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
@@ -57,7 +73,6 @@
         this.indieGameEvents.hammer = new _Hammer(this, {preventDefault: true}); //registers Hammer.js for the canvas
         this.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
         this.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
-
 
         eventTranslator(this);                                                              //main function, translates the physical events to the right events
 
@@ -143,23 +158,20 @@
             registerRotate(canvas, boundingRect);
         }
 
-        gyroMode = false;
+        //if gyroscope mode is enabled and gyroscope is detected
+        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
+            canvas.indieGameEvents.gyroMode = true;
+            registerGyroscope(canvas);
+            //https://github.com/tomgco/gyro.js
+            //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders deswegen gyronorm.js)
+        }
 
         /* touch */
-        if((physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
-            /*if gyroscopoe is set in the settings and a gyroscope and touch is detected, then use it else create the touch interface*/
-            if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) { //TODO gyroscope erkennen
-                gyroMode = true;
-                registerGyroscope(canvas);
-                //https://github.com/tomgco/gyro.js
-                //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders)
-            }
-
-            /*create an interface for touch devices when the device has an touch input*/
-            if (!isGamepadConnected()) {
-                createTouchInterface(canvas, boundingRect);
-            }
+        /*create an interface for touch devices when the device has an touch input and no controller is connected*/
+        if (!isGamepadConnected() && (physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
+            createTouchInterface(canvas, boundingRect);
         }
+
     }
 
 
@@ -233,7 +245,11 @@
 
     /*GYROSCOPE*/
     function registerGyroscope(canvas) {
-
+        _gn.init(_gyroSettings).then(function() {
+            _gn.start(function(data){
+                console.log(data.do.alpha);
+            });
+        });
     }
 
 
@@ -255,7 +271,7 @@
 
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
-        if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions && !gyroMode) {
+        if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions && !canvas.indieGameEvents.gyroMode) {
             var joystickSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.3, overlayRectSize.height * 0.3)), highestJoystickValue);
             //creates the dom objects for the joystick.
             //console.log(joystickSize);
@@ -306,7 +322,7 @@
         }
 
         /* if we use buttons for the touch movements */
-        else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions && !gyroMode) {
+        else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions && !canvas.indieGameEvents.gyroMode) {
             var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 110,
                 directionButtonMargin = 2, buttonEvents;
 
@@ -1000,14 +1016,6 @@
         }
 
         return count;
-    }
-
-    //is gyroscope available?
-    function gyroscopeAvailable() {
-        if (window.DeviceOrientationEvent) {
-
-        }
-        return false;
     }
 
     /* internet explorer workaround */
