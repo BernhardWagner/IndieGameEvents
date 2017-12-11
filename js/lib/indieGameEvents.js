@@ -260,7 +260,20 @@
                         buttonsHidden = true;
                     }
 
+
+                    //TODO
+
                 } else {
+                    if(joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
+                        canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'block';
+                        joystickHidden = true;
+                    }
+
+                    //same for direction buttons
+                    else if(buttonsHidden && canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
+                        canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = 'block';
+                        buttonsHidden = true;
+                    }
                     _gn.stop(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons)
                 }
             });
@@ -299,6 +312,10 @@
             dom.joystick.outerCircle.className += 'joystick-outer-circle';
 
             setJoystickStyle(dom, joystickSize);                                                                      //TODO resize on rezise window and orientation change
+
+            if(canvas.indieGameEvents.settings.useGyroscope) {
+                dom.joystick.wrapper.style.display = 'none';
+            }
 
             dom.overlay.appendChild(dom.joystick.wrapper).appendChild(dom.joystick.outerCircle).parentNode.appendChild(dom.joystick.innerCircle);                           //appends the joystick to the overlay
 
@@ -417,6 +434,10 @@
             setTouchDirectionButtonsStyle(dom, directionButtonSize, directionButtonMargin, events);
             dom.overlay.appendChild(dom.directionButtons.wrapper);
             translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
+
+            if(canvas.indieGameEvents.settings.useGyroscope) {
+                dom.directionButtons.wrapper.style.display = 'none';
+            }
         }
 
         if ((events.indexOf('action-1') !== -1 && !canvas.indieGameEvents.settings.doubleTabAction1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
