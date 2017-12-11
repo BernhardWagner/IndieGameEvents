@@ -242,14 +242,26 @@
 
     /*GYROSCOPE*/
     function registerGyroscope(canvas) {
+        var joystickHidden, buttonsHidden;
         _gn.init(_gyroSettings).then(function() {
             _gn.start(function(data){
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) || _gn.isAvailable(GyroNorm.DEVICE_ORIENTATION)) {
-                        //TODO hide gamepad or direction buttons
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) || _gn.isAvailable(GyroNorm.ROTATION_RATE)) {
+
+                    //if the joystick is available hide it, we dont neeed it on gyroMode
+                    if(!joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
+                        canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'none';
+                        joystickHidden = true;
+                    }
+
+                    //same for direction buttons
+                    else if(!buttonsHidden && canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
+                        canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = 'none';
+                        buttonsHidden = true;
+                    }
 
                 } else {
-
+                    _gn.stop(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons)
                 }
             });
         });
