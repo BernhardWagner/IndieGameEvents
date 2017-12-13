@@ -13,30 +13,46 @@ bw.test1 = (function () {
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 
-        var mc = new Hammer(canvas);
+        var x = 50, y = 50;
 
-        //canvas.hideIndieGameTouchInterfaceWithoutX();
-/*
         canvas.addEventListener('move-right', function (e) {
            console.log("right");
-           console.log(e);
+           console.log(e.strength);
+           x += e.strength;
         });
         canvas.addEventListener('move-up', function (e) {
             console.log("up");
+            y -= e.strength;
         });
         canvas.addEventListener('move-left', function (e) {
             console.log("left");
+            x -= e.strength;
         });
         canvas.addEventListener('move-down', function (e) {
             console.log("down");
+            y += e.strength;
         });
 
         canvas.addEventListener('open-map', function () {
             console.log('map-opened')
-        });*/
+        });
 
+        draw();
 
-        var i = 0;
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(x, y, 20, 0, 2 * Math.PI, false);
+            ctx.fillStyle = 'green';
+            ctx.fill();
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#003300';
+            ctx.stroke();
+
+            var i = 0;
+
+            requestAnimationFrame(draw);
+        }
 
     }
 })();

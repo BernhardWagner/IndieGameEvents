@@ -12,7 +12,8 @@
         _Hammer = Hammer,  /* hammer js */
         _gamepads,
         _gn,            /* gyronorm js normalises gyroscope values */
-        _gyroSettings;
+        _gyroSettings,
+        _gyroCalibration;  /* calibration values for the gyroscope */
 
 
     //sets the standard settings that will be overwritten with the settings object of the user
@@ -36,9 +37,18 @@
 
      _gyroSettings = {
          frequency: 200,
-         gravityNormalized:true,
-         orientationBase:GyroNorm.WORLD,
+         gravityNormalized: true,
+         orientationBase:GyroNorm.GAME,
          decimalCount:2,
+         screenAdjusted: true
+     };
+
+
+     _gyroCalibration = {
+         calibrate: true,
+         alpha: 0,
+         beta: 0,
+         gamma: 0,
      };
 
 
@@ -121,6 +131,7 @@
         var events = canvas.indieGameEvents.settings.events,
             physicalInput = canvas.indieGameEvents.settings.physicalInputs,
             boundingRect = canvas.getBoundingClientRect();
+
 
         /*directions*/
         if (events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
@@ -242,12 +253,14 @@
 
     /*GYROSCOPE*/
     function registerGyroscope(canvas) {
-        var joystickHidden, buttonsHidden;
+        var joystickHidden = true, buttonsHidden = true; //joysticks are hidden on standard and showed when device orientation and rotation rate is not supported
+
         _gn.init(_gyroSettings).then(function() {
             _gn.start(function(data){
-                //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) || _gn.isAvailable(GyroNorm.ROTATION_RATE)) {
+                var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
+                //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation) {
                     //if the joystick is available hide it, we dont neeed it on gyroMode
                     if(!joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
                         canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'none';
@@ -260,24 +273,66 @@
                         buttonsHidden = true;
                     }
 
-
-                    //TODO
+                   translateGyroscopeValues(data, canvas, orientation);
 
                 } else {
                     if(joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
                         canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'block';
-                        joystickHidden = true;
+                        joystickHidden = false;
                     }
 
                     //same for direction buttons
                     else if(buttonsHidden && canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
                         canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = 'block';
-                        buttonsHidden = true;
+                        buttonsHidden = false;
                     }
-                    _gn.stop(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons)
+                    _gn.end(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons or joystick)
                 }
             });
         });
+    }
+
+
+    function translateGyroscopeValues(data, canvas, orientation) {
+        var alpha, beta, gamma, event;
+
+
+        if(_gyroCalibration.calibrate) {
+            _gyroCalibration.alpha = data.do.alpha;
+            _gyroCalibration.beta = data.do.beta;
+            _gyroCalibration.gamma = data.do.gamma;
+            _gyroCalibration.calibrate = false;
+            console.log('calibrate');
+        }
+
+
+            alpha = data.do.alpha - _gyroCalibration.alpha;
+            beta = data.do.beta - _gyroCalibration.beta;
+            gamma = data.do.gamma - _gyroCalibration.gamma;
+
+
+        if (gamma < -20 && gamma > -90) {
+            event = new CustomEvent('move-left');
+            event.strength = gamma.map(-20, -90, 0, 100);
+            canvas.dispatchEvent(event);
+        }
+        else if (gamma > 20 && gamma < 90) {
+            event = new CustomEvent('move-right');
+            event.strength = gamma.map(20, 90, 0, 100);
+            canvas.dispatchEvent(event);
+        }
+
+        if (beta < -20 && beta > -90) {
+            event = new CustomEvent('move-up');
+            event.strength = beta.map(-20, -90, 0, 100);
+            canvas.dispatchEvent(event);
+        }
+        else if (beta > 20 && beta < 90) {
+            event = new CustomEvent('move-down');
+            event.strength = beta.map(20, 90, 0, 100);
+            canvas.dispatchEvent(event);
+        }
+
     }
 
 
@@ -1081,6 +1136,12 @@
     }
 
 
+    //deg to rad
+    Math.radians = function(degrees) {
+        return degrees * Math.PI / 180;
+    };
+
+
     /*to map numbers to a specific range*/
     Number.prototype.map = function (in_min, in_max, out_min, out_max) {
         return (this - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -1097,7 +1158,7 @@
 //TODO hochformat und querformat bei touch interface beachten
 //TODO scrollen und drehen nicht vergessen
 //TODO swipe for movements?
-//TODO gyroscope?
+//TODO gyroscope doesent work right
 //TODO fullscreen?
 
 /*Custom Events (IE support)*/
