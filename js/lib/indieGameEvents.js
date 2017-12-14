@@ -11,6 +11,9 @@
         //Add Hammer.js to library
         _Hammer = Hammer,  /* hammer js */
         _gamepads,
+        _gamepadAPI,        /* if the normal gamepad api is needed */
+        _webkitGamepadAPI,  /*if the webkit gamepad api is neddid */
+        _gamepadPolling,    /* if you are already polling for the gamepad Events*/
         _gn,            /* gyronorm js normalises gyroscope values */
         _gyroSettings,
         _gyroCalibration;  /* calibration values for the gyroscope */
@@ -36,7 +39,7 @@
      _gn = new GyroNorm();
 
      _gyroSettings = {
-         frequency: 200,
+         frequency: 100,
          gravityNormalized: true,
          orientationBase:GyroNorm.GAME,
          decimalCount:2,
@@ -50,6 +53,11 @@
          beta: 0,
          gamma: 0,
      };
+
+
+     /* check if you can use gamepads */
+    _gamepadAPI = 'GamepadEvent' in window;
+    _webkitGamepadAPI = 'WebKitGamepadEvent' in window;
 
 
     HTMLCanvasElement.prototype.registerIndieGameEvents = function (settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
@@ -73,8 +81,6 @@
             useGyroscope: settings.useGyroscope || _standardSettings.useGyroscope,
 
         };
-
-        _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
 
         //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
 
@@ -167,6 +173,19 @@
             registerRotate(canvas, boundingRect);
         }
 
+
+        //Gamepads
+        if(_gamepadAPI || _webkitGamepadAPI) {
+            canvas.indieGameEvents.gamepad = {};
+
+            registerConnectionGamepadEvents(canvas);
+
+            //if there is already a gamepad in use
+            if(isGamepadConnected()) {
+                getConnectedGamepadsAndPoll(canvas);
+            }
+        }
+
         //if gyroscope mode is enabled
         if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) {
             registerGyroscope(canvas);
@@ -182,6 +201,86 @@
 
     }
 
+    /*GAMEPAD */
+    function getConnectedGamepadsAndPoll(canvas) {
+        _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+
+        //only poll gamepad events when they are available
+        if(isGamepadConnected() && !_gamepadPolling){
+           _gamepadPolling = true;
+           pollGamepadEvents(canvas);
+        }
+        else if(!isGamepadConnected() && _gamepadPolling) {
+            _gamepadPolling = false;
+        }
+    }
+
+    //https://github.com/luser/gamepadtest/blob/master/gamepadtest.js
+    function registerConnectionGamepadEvents(canvas) {
+        if (_gamepadAPI) {
+            window.addEventListener("gamepadconnected", function() {gamepadConnectHandler(canvas)});
+            window.addEventListener("gamepaddisconnected", function() {gamepadConnectHandler(canvas)});
+        } else if (_webkitGamepadAPI) {
+            window.addEventListener("webkitgamepadconnected", function() {gamepadConnectHandler(canvas)});
+            window.addEventListener("webkitgamepaddisconnected", function() {gamepadConnectHandler(canvas)});
+        } else {
+            setInterval(function () {
+                getConnectedGamepadsAndPoll(canvas);
+            }, 500);
+        }
+    }
+    
+    function gamepadConnectHandler(canvas) {
+        getConnectedGamepadsAndPoll(canvas);
+    }
+    
+    function pollGamepadEvents(canvas) {
+        var gamepadKey, gamepad, i, button, pressed, strength;
+
+        if(_gamepadPolling) {
+            _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+            for(gamepadKey in _gamepads) {
+                if(_gamepads.hasOwnProperty(gamepadKey)){
+                    gamepad = _gamepads[gamepadKey];
+
+                    if(gamepad && typeof(gamepad) === 'object') {
+                        for (i = 0; i < gamepad.buttons.length; i++) {
+                                button = gamepad.buttons[i];
+
+                                pressed = button === 1.0;
+                                strength = button;
+
+
+
+                            if (typeof(button) === "object") {
+                                pressed = button.pressed;
+                                strength = button.value;
+                            }
+
+                            if(pressed){
+                                console.log(i + 1);
+                            }
+                        }
+
+                        if(gamepad.axes){
+                            for (i=0; i < gamepad.axes.length; i++) {
+                                // if(gamepad.axes[i].toFixed(4)) {
+                                //
+                                // }
+                                //TODO
+                            }
+                        }
+                    }
+                }
+            }
+
+            canvas.indieGameEvents.gamepad.pollingID = window.requestAnimationFrame(function () { pollGamepadEvents(canvas) });
+        }
+        else {
+            window.cancelAnimationFrame(canvas.indieGameEvents.gamepad.pollingID);
+        }
+
+    }
 
     /*FOR THE DIRECTIONS*/
     function registerMoveUp(canvas) {
@@ -260,7 +359,7 @@
                 var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation) {
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation && canvas.indieGameEvents.touchInterface) {
                     //if the joystick is available hide it, we dont neeed it on gyroMode
                     if(!joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
                         canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'none';
@@ -275,7 +374,7 @@
 
                    translateGyroscopeValues(data, canvas, orientation);
 
-                } else {
+                } else if (canvas.indieGameEvents.touchInterface){
                     if(joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
                         canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'block';
                         joystickHidden = false;
@@ -296,7 +395,6 @@
     function translateGyroscopeValues(data, canvas, orientation) {
         var alpha, beta, gamma, event;
 
-
         if(_gyroCalibration.calibrate) {
             _gyroCalibration.alpha = data.do.alpha;
             _gyroCalibration.beta = data.do.beta;
@@ -310,6 +408,8 @@
             beta = data.do.beta - _gyroCalibration.beta;
             gamma = data.do.gamma - _gyroCalibration.gamma;
 
+
+        console.log(gamma);
 
         if (gamma < -20 && gamma > -90) {
             event = new CustomEvent('move-left');

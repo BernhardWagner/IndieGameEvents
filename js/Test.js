@@ -14,7 +14,7 @@ bw.test1 = (function () {
         });
 
         var x = 50, y = 50;
-
+/*
         canvas.addEventListener('move-right', function (e) {
            console.log("right");
            console.log(e.strength);
@@ -35,7 +35,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('open-map', function () {
             console.log('map-opened')
-        });
+        });*/
 
         draw();
 
