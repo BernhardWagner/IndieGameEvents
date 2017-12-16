@@ -203,7 +203,18 @@
 
     /*GAMEPAD */
     function getConnectedGamepadsAndPoll(canvas) {
+        var gamepadKey, gamepad;
+
         _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
+
+        for (gamepadKey in _gamepads) {
+            if (_gamepads.hasOwnProperty(gamepadKey) && _gamepads[gamepadKey]) {
+                gamepad = _gamepads[gamepadKey];
+                if (gamepad.mapping !== 'standard') {
+                    console.warn('Gamepad with the id "'+ gamepad.id +'" has no standard key mapping and might not work properly');
+                }
+            }
+        }
 
         //only poll gamepad events when they are available
         if(isGamepadConnected() && !_gamepadPolling){
@@ -257,17 +268,30 @@
                                 strength = button.value;
                             }
 
-                            if(pressed){
+                            //standard key mapping...we are good to go (@see https://w3c.github.io/gamepad/#remapping)
+                            if(pressed && gamepad.mapping === 'standard'){
                                 console.log(i + 1);
+                            } else if (pressed) {                                 //oh oh not good
+                                console.log('nonstandard ' + (i + 1));
+                                //TODO map to non standard Thrustmaster Dual Analog 4
                             }
                         }
 
                         if(gamepad.axes){
-                            for (i=0; i < gamepad.axes.length; i++) {
-                                // if(gamepad.axes[i].toFixed(4)) {
-                                //
-                                // }
-                                //TODO
+                            if (gamepad.mapping === 'standard') {
+                                for (i = 0; i < gamepad.axes.length; i++) {
+                                    if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
+                                        //console.log(gamepad.axes[i]);
+                                        console.log(i);
+                                    }
+                                    //TODO
+                                }
+                            } else { //not standard key mapping
+                                for (i = 0; i < gamepad.axes.length; i++) {
+                                    if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
+                                        //TODO map to non standard Thrustmaster Dual Analog 4
+                                    }
+                                }
                             }
                         }
                     }
