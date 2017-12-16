@@ -1284,6 +1284,7 @@
 //TODO swipe for movements?
 //TODO gyroscope doesent work right
 //TODO fullscreen?
+//TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
 
 /*Custom Events (IE support)*/
 (function () {
