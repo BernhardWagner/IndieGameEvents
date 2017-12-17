@@ -175,7 +175,7 @@
 
 
         //Gamepads
-        if(_gamepadAPI || _webkitGamepadAPI) {
+        if((_gamepadAPI || _webkitGamepadAPI) && (physicalInput.indexOf('controller') !== -1 || physicalInput.indexOf('gamepad') !== -1)) {
             canvas.indieGameEvents.gamepad = {};
 
             registerConnectionGamepadEvents(canvas);
@@ -246,7 +246,9 @@
     }
     
     function pollGamepadEvents(canvas) {
-        var gamepadKey, gamepad, i, button, pressed, strength;
+        var gamepadKey, gamepad, i, button, pressed, strength, events;
+
+        events = canvas.indieGameEvents.settings.events;
 
         if(_gamepadPolling) {
             _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
@@ -262,7 +264,6 @@
                                 strength = button;
 
 
-
                             if (typeof(button) === "object") {
                                 pressed = button.pressed;
                                 strength = button.value;
@@ -271,9 +272,8 @@
                             //standard key mapping...we are good to go (@see https://w3c.github.io/gamepad/#remapping)
                             if(pressed && gamepad.mapping === 'standard'){
                                 console.log(i + 1);
-                            } else if (pressed) {                                 //oh oh not good
-                                console.log('nonstandard ' + (i + 1));
-                                //TODO map to non standard Thrustmaster Dual Analog 4
+                            } else if (pressed) {                                 //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
+                                nonStandardGamepadButtonActions(i, canvas, events);
                             }
                         }
 
@@ -282,7 +282,7 @@
                                 for (i = 0; i < gamepad.axes.length; i++) {
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
                                         //console.log(gamepad.axes[i]);
-                                        console.log(i);
+                                       // console.log(i);
                                     }
                                     //TODO
                                 }
@@ -290,6 +290,7 @@
                                 for (i = 0; i < gamepad.axes.length; i++) {
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
                                         //TODO map to non standard Thrustmaster Dual Analog 4
+                                        nonStandardGamepadAxisActions(i, canvas, events, gamepad.axes[i]);
                                     }
                                 }
                             }
@@ -304,6 +305,100 @@
             window.cancelAnimationFrame(canvas.indieGameEvents.gamepad.pollingID);
         }
 
+    }
+
+
+    function nonStandardGamepadAxisActions(i, canvas, events, gamepadAxes) {
+        var event;
+
+        if(i === 0) { //left and right
+            if(gamepadAxes < 0) {
+                event = new CustomEvent('move-left');
+                event.strength = gamepadAxes.map(0 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0) {
+                event = new CustomEvent('move-right');
+                event.strength = gamepadAxes.map(0 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(i === 1) { //up and down
+            if(gamepadAxes < 0) {
+                event = new CustomEvent('move-up');
+                event.strength = gamepadAxes.map(0 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0) {
+                event = new CustomEvent('move-down');
+                event.strength = gamepadAxes.map(0 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+    }
+
+    function nonStandardGamepadButtonActions(i, canvas, events) {
+        var event;
+
+        // console.log('nonstandard ' + (i + 1));
+        if (events.indexOf('action-1') !== -1 && i === 0) {
+            event = new CustomEvent('action-1');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-2') !== -1 && i === 1) {
+            event = new CustomEvent('action-2');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-3') !== -1 && i === 2) {
+            event = new CustomEvent('action-3');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-4') !== -1 && i === 3) {
+            event = new CustomEvent('action-4');
+            canvas.dispatchEvent(event);
+        }
+
+
+
+        if(events.indexOf('dismiss') !== -1 && i === 8) {
+            event = new CustomEvent('dismiss');
+            canvas.dispatchEvent(event);
+        }
+
+        if(events.indexOf('open-menu') !== -1 && i === 9) {
+            event = new CustomEvent('open-menu');
+            canvas.dispatchEvent(event);
+        }
+
+        if(events.indexOf('open-map') !== -1 && i === 5) {
+            event = new CustomEvent('open-map');
+            canvas.dispatchEvent(event);
+        }
+
+
+
+        if(events.indexOf('zoom') !== -1) {
+            if(i === 11) {
+                event = new CustomEvent('zoom');
+                event.scale = 0.1;
+                canvas.dispatchEvent(event);
+            } else if (i === 10) {
+                event = new CustomEvent('zoom');
+                event.scale = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(events.indexOf('rotate') !== -1) {
+            if(i === 6) {
+                event = new CustomEvent('rotate');
+                event.rotation = 0.1;
+                canvas.dispatchEvent(event);
+            } else if (i === 4) {
+                event = new CustomEvent('rotate');
+                event.rotation = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
     }
 
     /*FOR THE DIRECTIONS*/
@@ -349,7 +444,7 @@
 
         //TODO zoom on keyboard must be different then the native chrome and zoom
         //TODO strg scroll
-        //TODO zoom buttons on touch interface? (controller l1 r1 ?)
+        //TODO zoom buttons on touch interface?
         //TODO bei tastatur scale wert ist +0.5 und -0.5
     }
 
@@ -433,7 +528,7 @@
             gamma = data.do.gamma - _gyroCalibration.gamma;
 
 
-        console.log(gamma);
+        //console.log(gamma);
 
         if (gamma < -20 && gamma > -90) {
             event = new CustomEvent('move-left');
@@ -910,24 +1005,85 @@
             buttonField.addEventListener('touchstart', function (e) {
                 actionTouchButtonStartAction(e, buttonField, canvas)
             }, {passive: true});
+            buttonField.addEventListener('touchend', function (e) {
+                actionTouchButtonEndAction(e, buttonField, canvas)
+            }, {passive: true});
         } else if (isPointer()) {
             buttonField.addEventListener('pointerdown', function (e) {
                 actionTouchButtonStartAction(e, buttonField, canvas)
+            }, {passive: true});
+            buttonField.addEventListener('pointerup', function (e) {
+                actionTouchButtonEndAction(e, buttonField, canvas)
             }, {passive: true});
         } else if (isMSPointer()) {
             buttonField.addEventListener('MSPointerDown', function (e) {
                 actionTouchButtonStartAction(e, buttonField, canvas)
             }, {passive: true});
+            buttonField.addEventListener('MSPointerUp', function (e) {
+                actionTouchButtonEndAction(e, buttonField, canvas)
+            }, {passive: true});
         }
     }
 
     function actionTouchButtonStartAction(e, buttonField, canvas) {
-        var target = prepareTarget(e);                                                                   //TODO should also work with multitoch?
+        var targets = {}, i;
 
-        if (target instanceof HTMLButtonElement && target.name) {
-            canvas.dispatchEvent(createNewEvent(target.name));
+        if (e.changedTouches[0].target) {
+            i = 0;
+            for (var touch in e.changedTouches) {
+                if (e.changedTouches.hasOwnProperty(touch) && e.changedTouches[touch].target) {
+                    targets[i] = e.changedTouches[touch].target;
+                    i++;
+                }
+            }
+        } else if (e.target) {
+            targets[0] = e.target;
         }
 
+        for (var target in targets) {
+            if (targets.hasOwnProperty(target)) {
+                targets[target].buttonPressed = window.requestAnimationFrame(function () {
+                    actionTouchButtonEventDispatchLoop(targets[target], buttonField, canvas)
+                });
+            }
+
+        }
+    }
+
+    function actionTouchButtonEventDispatchLoop(target, buttonField ,canvas) {
+        if (target instanceof HTMLButtonElement && target.name) {
+            canvas.dispatchEvent(createNewEvent(target.name));
+
+            if(target.buttonPressed){
+                target.buttonPressed = window.requestAnimationFrame(function () {actionTouchButtonEventDispatchLoop(target, buttonField, canvas)});
+            }
+        }
+    }
+
+    function actionTouchButtonEndAction(e, buttonField, canvas) {
+        var targets = {}, i;
+
+        if(e.changedTouches[0].target) {
+            i = 0;
+            for(var touch in e.changedTouches) {
+                if(e.changedTouches.hasOwnProperty(touch) && e.changedTouches[touch].target) {
+                   targets[i] = e.changedTouches[touch].target;
+                   i++;
+                }
+            }
+        } else if(e.target) {
+            targets[0] = e.target;
+        }
+
+        //cancel all event frame loops
+        for(var target in targets) {
+            if(targets.hasOwnProperty(target)) {
+                if (targets[target].buttonPressed) {
+                    window.cancelAnimationFrame(targets[target].buttonPressed);
+                    targets[target].buttonPressed = false;
+                }
+            }
+        }
     }
 
 
