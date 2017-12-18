@@ -1777,7 +1777,7 @@
 //TODO gyroscope doesent work right
 //TODO fullscreen?
 //TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
-//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all)?
+//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) und bei touch zweiten joystick generieren???
 
 /*Custom Events (IE support)*/
 (function () {
