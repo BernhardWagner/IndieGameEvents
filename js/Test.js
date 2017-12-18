@@ -8,43 +8,63 @@ bw.test1 = (function () {
         var canvas = document.getElementById('canvas'),
             ctx = canvas.getContext("2d");
         canvas.registerIndieGameEvents({
-            events: ['move-all', 'action-1', 'action-2', 'action-3', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump
-            touchDirectionController: 'joystick'
+            events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump
+            touchDirectionController: 'joystick',
+            touchJoystickAccuracy: 'smooth',                     //stength of the controller directions will get more accurate //smooth directions
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 
         //bei zoom unt rotate event immer += verwenden für value
 
-        var x = 50, y = 50, zoom = 1;
+        canvas.onclick = function () {
+
+
+            if (canvas.requestFullscreen) {
+                canvas.requestFullscreen();
+            } else if (canvas.msRequestFullscreen) {
+                canvas.msRequestFullscreen();
+            } else if (canvas.mozRequestFullScreen) {
+                canvas.mozRequestFullScreen();
+            } else if (canvas.webkitRequestFullscreen) {
+                canvas.webkitRequestFullscreen();
+            }
+        };
+
+        var x = 500, y = 200, zoom = 1;
 
         canvas.addEventListener('move-right', function (e) {
-           console.log("right");
-           console.log(e.strength);
-           x += e.strength;
+           //console.log("right");
+           //console.log(e.strength);
+           x += e.strength/100;
         });
         canvas.addEventListener('move-up', function (e) {
-            console.log("up");
-            y -= e.strength;
+            //console.log("up");
+            y -= e.strength/100;
         });
 
         canvas.addEventListener('move-left', function (e) {
-            console.log("left");
-            console.log(e.strength);
-            x -= e.strength;
+           // console.log("left");
+           // console.log(e.strength);
+            x -= e.strength/100;
         });
 
         canvas.addEventListener('move-down', function (e) {
-            console.log("down");
-            y += e.strength;
+           // console.log("down");
+            //console.log(e.strength);
+            y += e.strength/100;
         });
 
         canvas.addEventListener('open-map', function () {
             console.log('map-opened')
         });
 
-        canvas.addEventListener('rotate', function (e) {
+        canvas.addEventListener('zoom', function (e) {
            console.log(e.scale);
-           zoom += e.rotation;
+           zoom += e.scale;
+        });
+
+        canvas.addEventListener('action-1', function () {
+            console.log("action1");
         });
 
         canvas.addEventListener('action-2', function () {

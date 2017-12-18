@@ -16,6 +16,8 @@
         _gamepadPolling,    /* if you are already polling for the gamepad Events*/
         _gn,            /* gyronorm js normalises gyroscope values */
         _gyroSettings,
+        _fps,            /* inaccurate value of the fps */
+        _lastLoop,         /* needed for the fps metering */
         _gyroCalibration;  /* calibration values for the gyroscope */
 
 
@@ -27,19 +29,18 @@
         useArrowDirections: true,
         useEightTouchDirections: true,
         touchDirectionController: 'joystick',                                                       //virtual joystick... buttons would also be an option
-        joystickType: 'static',                                                                        //when a joystick is used there are two types static and dynamic (generates joystick on touch)
+        touchJoystickAccuracy: 'standard',                                                                        //when a joystick is used there are two types static and dynamic (generates joystick on touch)
         doubleTabAction1: false,                                                                    //when double tabbed on the screen the action 1 event will be triggered and on the touch interface the action 1 button does not appear
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
         useGyroscope: true                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
     };
 
-
     /*init of gyronorm.js*/
      _gn = new GyroNorm();
 
      _gyroSettings = {
-         frequency: 100,
+         frequency: 15,
          gravityNormalized: true,
          orientationBase:GyroNorm.GAME,
          decimalCount:2,
@@ -73,7 +74,7 @@
             useWASDDirections: settings.useWASDDirections || _standardSettings.useWASDDirections,
             useArrowDirections: settings.useArrowDirections || _standardSettings.useArrowDirections,
             touchDirectionController: settings.touchDirectionController || _standardSettings.touchDirectionController,
-            joystickType: settings.joystickType || _standardSettings.joystickType,
+            touchJoystickAccuracy: settings.touchJoystickAccuracy || _standardSettings.touchJoystickAccuracy,
             useEightTouchDirections: settings.useEightTouchDirections || _standardSettings.useEightTouchDirections,
             doubleTapAction1: settings.doubleTabAction1 || _standardSettings.doubleTabAction1,
             touchDismissButton: settings.touchDismissButton || _standardSettings.touchDismissButton,
@@ -197,6 +198,12 @@
         /*create an interface for touch devices when the device has an touch input and no controller is connected*/
         if (!isGamepadConnected() && (physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
             createTouchInterface(canvas, boundingRect);
+
+            //when it fullscreen is activated
+            document.addEventListener("fullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
+            document.addEventListener("webkitfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
+            document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
+            document.addEventListener("MSFullscreenChange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
         }
 
     }
@@ -271,7 +278,7 @@
 
                             //standard key mapping...we are good to go (@see https://w3c.github.io/gamepad/#remapping)
                             if(pressed && gamepad.mapping === 'standard'){
-                                console.log(i + 1);
+                                standardGamepadButtonActions(i, canvas, events);
                             } else if (pressed) {                                 //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
                                 nonStandardGamepadButtonActions(i, canvas, events);
                             }
@@ -281,10 +288,8 @@
                             if (gamepad.mapping === 'standard') {
                                 for (i = 0; i < gamepad.axes.length; i++) {
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
-                                        //console.log(gamepad.axes[i]);
-                                       // console.log(i);
+                                        standardGamepadAxisActions(i, canvas, events, gamepad.axes[i]);
                                     }
-                                    //TODO
                                 }
                             } else { //not standard key mapping
                                 for (i = 0; i < gamepad.axes.length; i++) {
@@ -311,29 +316,115 @@
     function nonStandardGamepadAxisActions(i, canvas, events, gamepadAxes) {
         var event;
 
+        //knob one
         if(i === 0) { //left and right
-            if(gamepadAxes < 0) {
+            if(gamepadAxes < -0.1) { //0.1 for tolearance
                 event = new CustomEvent('move-left');
-                event.strength = gamepadAxes.map(0 , -1 , 0, 100);
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
-            } else if(gamepadAxes > 0) {
+            } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
-                event.strength = gamepadAxes.map(0 , 1 , 0, 100);
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
             }
         }
 
         if(i === 1) { //up and down
-            if(gamepadAxes < 0) {
+            if(gamepadAxes < -0.1) {
                 event = new CustomEvent('move-up');
-                event.strength = gamepadAxes.map(0 , -1 , 0, 100);
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
-            } else if(gamepadAxes > 0) {
+            } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
-                event.strength = gamepadAxes.map(0 , 1 , 0, 100);
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
             }
         }
+
+        //todo knob 2 use for lookaround?
+        //knob two (try standard mapping)
+        if(i === 2) { //left and right
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-left');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-right');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(i === 3) { //up and down
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-up');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-down');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        //knob three (non standard thrustmaster mapping)
+        if(i === 5) { //left and right
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-left');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-right');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(i === 6) { //up and down
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-up');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-down');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+
+        //knob three (non standard thrustmaster mapping)
+
+    }
+
+    function standardGamepadAxisActions(i, canvas, events, gamepadAxes) {
+        var event;
+
+        //knob one
+        if(i === 0) { //left and right
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-left');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-right');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(i === 1) { //up and down
+            if(gamepadAxes < -0.1) {
+                event = new CustomEvent('move-up');
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                canvas.dispatchEvent(event);
+            } else if(gamepadAxes > 0.1) {
+                event = new CustomEvent('move-down');
+                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+                canvas.dispatchEvent(event);
+            }
+        }
+
     }
 
     function nonStandardGamepadButtonActions(i, canvas, events) {
@@ -362,16 +453,28 @@
         if(events.indexOf('dismiss') !== -1 && i === 8) {
             event = new CustomEvent('dismiss');
             canvas.dispatchEvent(event);
+
+            showTouchMapButton();
+            showTouchMenuButton();
+            hideTouchDismissButton();
         }
 
         if(events.indexOf('open-menu') !== -1 && i === 9) {
             event = new CustomEvent('open-menu');
             canvas.dispatchEvent(event);
+
+            //hide touch menu button and touch map button if they are there
+            hideTouchMenuButton();
+            hideTouchMapButton();
+            showTouchDismissButton();
         }
 
         if(events.indexOf('open-map') !== -1 && i === 5) {
             event = new CustomEvent('open-map');
             canvas.dispatchEvent(event);
+
+            hideTouchMapButton();
+            showTouchDismissButton();
         }
 
 
@@ -390,6 +493,83 @@
 
         if(events.indexOf('rotate') !== -1) {
             if(i === 6) {
+                event = new CustomEvent('rotate');
+                event.rotation = 0.1;
+                canvas.dispatchEvent(event);
+            } else if (i === 4) {
+                event = new CustomEvent('rotate');
+                event.rotation = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
+    }
+
+    function standardGamepadButtonActions(i, canvas, events) {
+        var event;
+
+        // console.log('nonstandard ' + (i + 1));
+        if (events.indexOf('action-1') !== -1 && i === 0) {
+            event = new CustomEvent('action-1');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-2') !== -1 && i === 2) {
+            event = new CustomEvent('action-2');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-3') !== -1 && i === 1) {
+            event = new CustomEvent('action-3');
+            canvas.dispatchEvent(event);
+        }
+        if (events.indexOf('action-4') !== -1 && i === 3) {
+            event = new CustomEvent('action-4');
+            canvas.dispatchEvent(event);
+        }
+
+
+
+        if(events.indexOf('dismiss') !== -1 && i === 8) {
+            event = new CustomEvent('dismiss');
+            canvas.dispatchEvent(event);
+
+            showTouchMapButton();
+            showTouchMenuButton();
+            hideTouchDismissButton();
+        }
+
+        if(events.indexOf('open-menu') !== -1 && i === 9) {
+            event = new CustomEvent('open-menu');
+            canvas.dispatchEvent(event);
+
+            //hide touch menu button and touch map button if they are there
+            hideTouchMenuButton();
+            hideTouchMapButton();
+            showTouchDismissButton();
+        }
+
+        if(events.indexOf('open-map') !== -1 && i === 14) {
+            event = new CustomEvent('open-map');
+            canvas.dispatchEvent(event);
+
+            hideTouchMapButton();
+            showTouchDismissButton();
+        }
+
+
+
+        if(events.indexOf('zoom') !== -1) {
+            if(i === 11) {
+                event = new CustomEvent('zoom');
+                event.scale = 0.1;
+                canvas.dispatchEvent(event);
+            } else if (i === 10) {
+                event = new CustomEvent('zoom');
+                event.scale = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(events.indexOf('rotate') !== -1) {
+            if(i === 5) {
                 event = new CustomEvent('rotate');
                 event.rotation = 0.1;
                 canvas.dispatchEvent(event);
@@ -530,25 +710,50 @@
 
         //console.log(gamma);
 
-        if (gamma < -20 && gamma > -90) {
+        if (gamma < -10 && gamma > -90) {
             event = new CustomEvent('move-left');
-            event.strength = gamma.map(-20, -90, 0, 100);
+            //better mapping for the strenght of the gyroscope
+            if(gamma > -45) {
+                event.strength = gamma.map(-10, -45, 0, 100);
+            } else {
+                event.strength = 100;
+            }
             canvas.dispatchEvent(event);
         }
-        else if (gamma > 20 && gamma < 90) {
+        else if (gamma > 10 && gamma < 90) {
             event = new CustomEvent('move-right');
-            event.strength = gamma.map(20, 90, 0, 100);
+
+            if(gamma < 30) {
+                event.strength = gamma.map(10, 45, 0, 100);
+            } else {
+                event.strength = 100;
+            }
+
             canvas.dispatchEvent(event);
         }
 
-        if (beta < -20 && beta > -90) {
+        if (beta < -10 && beta > -90) {
             event = new CustomEvent('move-up');
-            event.strength = beta.map(-20, -90, 0, 100);
+
+            if(beta > -30) {
+                event.strength = beta.map(-10, -45, 0, 100);
+            } else {
+                event.strength = 100;
+            }
+
             canvas.dispatchEvent(event);
         }
-        else if (beta > 20 && beta < 90) {
+        else if (beta > 10 && beta < 90) {
             event = new CustomEvent('move-down');
-            event.strength = beta.map(20, 90, 0, 100);
+
+            if(beta < 30) {
+                event.strength = beta.map(10, 45, 0, 100);
+            } else {
+                event.strength = 100;
+            }
+
+            console.log(event.strength);
+
             canvas.dispatchEvent(event);
         }
 
@@ -898,6 +1103,61 @@
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
     }
 
+    //on fullscreen change position of canvas
+    function touchInterfaceFullscreenHandler(dom, canvas) {
+        var canvasPosRect;
+
+        setTimeout(function () {
+            canvasPosRect  = canvas.getBoundingClientRect();
+
+            if (parseInt(dom.overlay.style.zIndex) === 2147483647) {   //2147483647 is the max z-index value
+                dom.overlay.style.zIndex = dom.overlay.oldStyle.zIndex;
+                dom.overlay.style.top = canvasPosRect.top + "px";
+                dom.overlay.style.left = canvasPosRect.left + "px";
+            } else {
+                dom.overlay.oldStyle = JSON.parse(JSON.stringify(dom.overlay.style));
+                dom.overlay.style.zIndex = 2147483647;
+                dom.overlay.style.top = canvasPosRect.top + "px";
+                dom.overlay.style.left = canvasPosRect.left + "px";
+            }
+        }, 100);
+    }
+
+    function hideTouchMenuButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.menuButton) {
+            canvas.indieGameEvents.touchInterface.domElements.menuButton.style.display = "none";
+        }
+    }
+
+    function showTouchMenuButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.menuButton) {
+            canvas.indieGameEvents.touchInterface.domElements.menuButton.style.display = "block";
+        }
+    }
+
+    function hideTouchMapButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
+            canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "none";
+        }
+    }
+
+    function showTouchMapButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
+            canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "block";
+        }
+    }
+
+    function showTouchDismissButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
+            canvas.indieGameEvents.touchInterface.domElements.dismissButton.style.display = "block";
+        }
+    }
+
+    function hideTouchDismissButton() {
+        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
+            canvas.indieGameEvents.touchInterface.domElements.dismissButton.style.display = "none";
+        }
+    }
 
     function menuButtonStartAction(e, canvas, dom, events) {
         var target = prepareTarget(e);
@@ -1125,7 +1385,9 @@
             data.innerCircle.style.top = data.yPos + "px";
         }
 
-        triggerJoystickDirectionEvents(data, canvas);
+        if (!data.innerCircle.eventDispatchID) {
+            data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
+        }
     }
 
     function joystickMoveAction(e, canvas) {
@@ -1154,12 +1416,13 @@
             data.yPos = vectorA.y + data.midPoint.y;
         }
 
+        window.cancelAnimationFrame(data.innerCircle.eventDispatchID);
+
+        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
+
 
         data.innerCircle.style.left = data.xPos + "px";
         data.innerCircle.style.top = data.yPos + "px";
-
-        triggerJoystickDirectionEvents(data, canvas);
-
     }
 
     function joystickReleaseAction(e) {
@@ -1172,6 +1435,9 @@
         setTimeout(function () {
             data.innerCircle.style.transition = "";
         }, 200);
+
+        window.cancelAnimationFrame(data.innerCircle.eventDispatchID);
+        data.innerCircle.eventDispatchID = null;
     }
 
     function getJoystickTouchData(e) {
@@ -1192,39 +1458,103 @@
             events = canvas.indieGameEvents.settings.events,
             distance = getDistance(touchPoint, data.midPoint),
             strength = ~~distance.map(0, data.midPoint.x, 0, 100),
-            event;
+            event,
+            strengthDampen;
 
-        if (distance > data.parentPosition.width / 9) {
-            var angle = getAngle(data.midPoint, touchPoint);
+        //less accurate (standard mode)
+        if(canvas.indieGameEvents.settings.touchJoystickAccuracy === 'standard' || !canvas.indieGameEvents.settings.touchJoystickAccuracy) {
+            if (distance > data.parentPosition.width / 9) {
+                var angle = getAngle(data.midPoint, touchPoint);
 
-            if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
-                //console.log('right');
-                event = new CustomEvent('move-right');
-                event.strength = strength;
-                canvas.dispatchEvent(event);
-            }
+                if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('right');
+                    event = new CustomEvent('move-right');
+                    event.strength = strength;
+                    canvas.dispatchEvent(event);
+                }
 
-            if (angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
-                // console.log('down');
-                event = new CustomEvent('move-down');
-                event.strength = strength;
-                canvas.dispatchEvent(event);
-            }
+                if (angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
+                    // console.log('down');
+                    event = new CustomEvent('move-down');
+                    event.strength = strength;
+                    canvas.dispatchEvent(event);
+                }
 
-            if (((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
-                //console.log('left');
-                event = new CustomEvent('move-left');
-                event.strength = strength;
-                canvas.dispatchEvent(event);
-            }
+                if (((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('left');
+                    event = new CustomEvent('move-left');
+                    event.strength = strength;
+                    canvas.dispatchEvent(event);
+                }
 
-            if (angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
-                //console.log('up');
-                event = new CustomEvent('move-up');
-                event.strength = strength;
-                canvas.dispatchEvent(event);
+                if (angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('up');
+                    event = new CustomEvent('move-up');
+                    event.strength = strength;
+                    canvas.dispatchEvent(event);
+                }
             }
         }
+
+        //accurate mode (smooth)
+        else if(canvas.indieGameEvents.settings.touchJoystickAccuracy === 'smooth' || canvas.indieGameEvents.settings.touchJoystickAccuracy === 'Smooth') {
+            if (distance > data.parentPosition.width / 9) {
+                var angle = getAngle(data.midPoint, touchPoint);
+
+                if (angle < 90 && angle > -90 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('right');
+                    event = new CustomEvent('move-right');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > 45 || angle < -45) {
+                        strengthDampen = (angle > 0) ? angle.map(90, 45, 0, 1): angle.map(-90, -45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+                }
+
+                if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
+                    // console.log('down');
+                    event = new CustomEvent('move-down');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > 135 || angle < 45) {
+                        strengthDampen = (angle > 90) ? angle.map(180, 135, 0, 1): angle.map(0, 45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+                }
+
+                if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
+                    event = new CustomEvent('move-left');
+
+                    if((angle > -135 && angle < 0) || (angle < 135 && angle > 0)) {
+                        strengthDampen = (angle < -90) ? angle.map(-90, -135, 0, 1): angle.map(90, 135, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+                   // console.log(angle);
+                }
+
+                if (angle < 0 && angle > -180 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('up');
+                    event = new CustomEvent('move-up');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > -45 || angle < -135) {
+                        strengthDampen = (angle < -90) ? angle.map(-180, -135, 0, 1): angle.map(0, -45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+                }
+            }
+        }
+
+        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
     }
 
 
@@ -1416,6 +1746,12 @@
     }
 
 
+    //getInaccureateFPS
+    function getInaccurateFPS(lastLoop) {
+        return 1000 / new Date - lastLoop;
+    }
+
+
     //deg to rad
     Math.radians = function(degrees) {
         return degrees * Math.PI / 180;
@@ -1441,6 +1777,7 @@
 //TODO gyroscope doesent work right
 //TODO fullscreen?
 //TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
+//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all)?
 
 /*Custom Events (IE support)*/
 (function () {
