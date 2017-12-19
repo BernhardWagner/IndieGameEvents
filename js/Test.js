@@ -10,7 +10,8 @@ bw.test1 = (function () {
         canvas.registerIndieGameEvents({
             events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump
             touchDirectionController: 'joystick',
-            touchJoystickAccuracy: 'smooth',                     //stength of the controller directions will get more accurate //smooth directions
+            touchJoystickAccuracy: 'smooth', //stength of the touch controller directions will get more accurate //smooth directions
+            useWASDDirections: true,
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 

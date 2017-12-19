@@ -187,6 +187,12 @@
             }
         }
 
+
+        //keyboard
+        if(physicalInput.indexOf('keyboard') !== -1) {
+            registerKeyboardEvents(canvas, events);
+        }
+
         //if gyroscope mode is enabled
         if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) {
             registerGyroscope(canvas);
@@ -205,6 +211,68 @@
             document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
             document.addEventListener("MSFullscreenChange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
         }
+
+    }
+
+
+    /*KEYBOARD*/
+    function registerKeyboardEvents(canvas, events) {
+        var event, keyBoardEvents, keyMapping;
+
+        keyBoardEvents = {};
+        keyMapping = {};
+
+        if (canvas.indieGameEvents.settings.useWASDDirections) {
+            keyMapping.left = 65;
+            keyMapping.right = 68;
+            keyMapping.down = 83;
+            keyMapping.up = 87;
+        } else {
+            keyMapping.left = 37;
+            keyMapping.right = 39;
+            keyMapping.down = 38;
+            keyMapping.up = 40;
+        }
+
+
+        if (events.indexOf('move-all') !== -1 || events.indexOf('move-left') !== -1) {
+            keyBoardEvents[keyMapping.left] = function () {              //left
+                event = new CustomEvent('move-left');
+                event.strength = 100;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if (events.indexOf('move-all') !== -1 || events.indexOf('move-right') !== -1) {
+            keyBoardEvents[keyMapping.right] = function () {              //right
+                event = new CustomEvent('move-right');
+                event.strength = 100;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if (events.indexOf('move-all') !== -1 || events.indexOf('move-up') !== -1) {
+            keyBoardEvents[keyMapping.up] = function () {              //right
+                event = new CustomEvent('move-up');
+                event.strength = 100;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if (events.indexOf('move-all') !== -1 || events.indexOf('move-down') !== -1) {
+            keyBoardEvents[keyMapping.down] = function () {              //right
+                event = new CustomEvent('move-down');
+                event.strength = 100;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+
+
+        KeyboardController(keyBoardEvents);
+    }
+
+    function keyboardUpEvents(e, canvas, events) {
 
     }
 
@@ -1762,6 +1830,61 @@
     Number.prototype.map = function (in_min, in_max, out_min, out_max) {
         return (this - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     };
+
+
+    /* rewrites the keyboard controller so you get rid of the delay @see (https://stackoverflow.com/questions/3691461/remove-key-press-delay-in-javascript)*/
+    // Keyboard input with customisable repeat (set to 0 for no key repeat)
+    function KeyboardController(keys) {
+        var timers, repeatAction;
+
+        timers = {};
+
+        document.onkeydown = function (event) {
+            var key = (event || window.event).keyCode;
+            if (!(key in keys))
+                return true;
+            if (!(key in timers)) {
+                timers[key] = requestAnimationFrame(function () {
+                    repeatAction(key, keys);
+                });
+            }
+            return false;
+        };
+
+        // Cancel timeout and mark key as released on keyup
+        //
+        document.onkeyup = function (event) {
+            var key = (event || window.event).keyCode;
+            if (key in timers) {
+                if (timers[key] !== null) {
+                    cancelAnimationFrame(timers[key]);
+                }
+                timers[key] = null;
+                delete timers[key];
+            }
+        };
+
+        // When window is unfocused we may not get key events. To prevent this
+        // causing a key to 'get stuck down', cancel all held keys
+        //
+        window.onblur = function () {
+            for (var key in timers)
+                if (timers[key] !== null) {
+                    cancelAnimationFrame(timers[key]);
+                    timers[key] = null;
+                    timers = {};
+                }
+        };
+
+        repeatAction = function (key, keys) {
+            keys[key]();
+            timers[key] = requestAnimationFrame(function () {
+                repeatAction(key, keys)
+            });
+
+        }
+
+    }
 
 
 })();
