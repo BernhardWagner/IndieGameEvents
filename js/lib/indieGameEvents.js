@@ -18,7 +18,10 @@
         _gyroSettings,
         _fps,            /* inaccurate value of the fps */
         _lastLoop,         /* needed for the fps metering */
-        _gyroCalibration;  /* calibration values for the gyroscope */
+        _gyroCalibration,  /* calibration values for the gyroscope */
+        _openMenuAllowed,   /* do not trigger open menu every frame */
+        _openMapAllowed,   /* do not trigger open map every frame */
+        _dismissAllowed;  /* do not trigger dismiss every frame */
 
 
     //sets the standard settings that will be overwritten with the settings object of the user
@@ -33,7 +36,9 @@
         doubleTabAction1: false,                                                                    //when double tabbed on the screen the action 1 event will be triggered and on the touch interface the action 1 button does not appear
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
-        useGyroscope: true                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
+        useGyroscope: true,                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
+        useSpaceStrgAltShiftActions: true,                                                             //when true use the space for action 1, strg for action 2, alt for action 3 and shift for action 3 too
+                                                                                                        //else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l
     };
 
     /*init of gyronorm.js*/
@@ -80,6 +85,7 @@
             touchDismissButton: settings.touchDismissButton || _standardSettings.touchDismissButton,
             menuButton: settings.menuButton || _standardSettings.menuButton,
             useGyroscope: settings.useGyroscope || _standardSettings.useGyroscope,
+            useSpaceStrgAltShiftActions: settings.useSpaceStrgAltShiftActions || _standardSettings.useSpaceStrgAltShiftActions
 
         };
 
@@ -139,6 +145,8 @@
             physicalInput = canvas.indieGameEvents.settings.physicalInputs,
             boundingRect = canvas.getBoundingClientRect();
 
+        canvas.indieGameEvents.oldBoundingRect = boundingRect;
+
 
         /*directions*/
         if (events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
@@ -190,7 +198,7 @@
 
         //keyboard
         if(physicalInput.indexOf('keyboard') !== -1) {
-            registerKeyboardEvents(canvas, events);
+            registerKeyboardEvents(canvas, events, canvas.indieGameEvents.settings);
         }
 
         //if gyroscope mode is enabled
@@ -210,13 +218,112 @@
             document.addEventListener("webkitfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
             document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
             document.addEventListener("MSFullscreenChange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
+
+            //handle resize of canvas for the touch overlay
+            window.addEventListener("resize", function () {handleResize(canvas, canvas.indieGameEvents.touchInterface)});
+            window.addEventListener("orientationchange", function () {handleResize(canvas, canvas.indieGameEvents.touchInterface)});
+
         }
 
+
+        //handle window rezise event
+        function handleResize(canvas, touchInterface) {
+            var newBoundingRect = canvas.getBoundingClientRect(),
+                oldBoundingRect = canvas.indieGameEvents.oldBoundingRect,
+                visibleJoystick,
+                visibleDirectionButtons;
+
+            if(newBoundingRect.width !== oldBoundingRect.width || newBoundingRect.height !== oldBoundingRect.height) {
+                //hide joystick at the beginning until the gyroscope is loaded
+                if(canvas.indieGameEvents.touchInterface) {
+                    if(canvas.indieGameEvents.touchInterface.domElements.joystick) {
+                        (canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display !== 'none') ? visibleJoystick = true : visibleJoystick = false;
+                    }
+
+                    else if(canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
+                        (canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display !== 'none') ? visibleDirectionButtons = true : visibleDirectionButtons = false;
+                    }
+                }
+
+                //should be garbage collected
+                document.body.removeChild(touchInterface.domElements.overlay);
+                delete canvas.touchInterface;
+                touchInterface = null;
+                //create new touch interface
+                createTouchInterface(canvas, newBoundingRect);
+
+                visibleJoystick ? canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = "block" : '';
+                visibleDirectionButtons ? canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = "block" : '';
+
+                canvas.indieGameEvents.oldBoundingRect = newBoundingRect;
+            }
+        }
+
+
+        //mouse events
+        if(physicalInput.indexOf('mouse') !== -1) {
+            registerMouseEvents(canvas, events, canvas.indieGameEvents.settings);
+        }
+
+
+        setSinglePressEvents(canvas);
+
+    }
+    
+    
+    //MOUSE
+    function registerMouseEvents() {
+        
+    }
+
+    //Events that should not trigger every single frame change
+    function setSinglePressEvents(canvas) {
+        _openMapAllowed = true;
+        _openMenuAllowed = true;
+        _dismissAllowed = true;
+
+        canvas.addEventListener('open-map', function(e) {
+            if(!_openMapAllowed) {
+                e.stopImmediatePropagation();
+            } else {
+                _openMapAllowed = false;
+
+                setTimeout(function () {
+                    _openMapAllowed = true;
+                }, 750);
+            }
+        });
+
+        canvas.addEventListener('dismiss', function(e) {
+            if(!_dismissAllowed) {
+                //stop event
+                e.stopImmediatePropagation();
+            } else {
+                _dismissAllowed = false;
+
+                setTimeout(function () {
+                    _dismissAllowed = true;
+                }, 750);
+            }
+        });
+
+        canvas.addEventListener('open-menu', function(e) {
+            if(!_openMenuAllowed) {
+                //stop event
+                e.stopImmediatePropagation();
+            } else {
+                _openMenuAllowed = false;
+
+                setTimeout(function () {
+                    _openMenuAllowed = true;
+                }, 750);
+            }
+        });
     }
 
 
     /*KEYBOARD*/
-    function registerKeyboardEvents(canvas, events) {
+    function registerKeyboardEvents(canvas, events, settings) {
         var event, keyBoardEvents, keyMapping;
 
         keyBoardEvents = {};
@@ -234,6 +341,63 @@
             keyMapping.up = 40;
         }
 
+        //action keys
+        if(settings.useSpaceStrgAltShiftActions) {
+            keyMapping.action1Space = 32;
+            keyMapping.action2Strg = 17;
+            keyMapping.action3Alt = 18;
+            keyMapping.action4Shift = 16;
+        }
+
+        //numpad
+        keyMapping.action1NP = 97;
+        keyMapping.action2NP = 98;
+        keyMapping.action3NP = 99;
+        keyMapping.action4NP = 100;
+
+        //numbers
+        keyMapping.action1N = 49;
+        keyMapping.action2N = 50;
+        keyMapping.action3N = 51;
+        keyMapping.action4N = 52;
+
+        //letters
+        keyMapping.action1L = 72;
+        keyMapping.action2L = 74;
+        keyMapping.action3L = 75;
+        keyMapping.action4L = 76;
+
+        //zooming
+        //numpad
+        keyMapping.zoomInNP = 107;
+        keyMapping.zoomOutNP = 109;
+
+        //letters
+        keyMapping.zoomInL = 187;
+        keyMapping.zoomOutL = 189;
+
+
+        //rotating
+        //numpad (/ and x)
+        keyMapping.rotateLeftNP = 111;
+        keyMapping.rotateRightNP = 106;
+
+        //lettters (i and o)
+        keyMapping.rotateLeftL = 73;
+        keyMapping.rotateRightL = 79;
+
+        //p for pause (open menu)
+        keyMapping.openMenu = 80;
+
+        //m for map
+        keyMapping.openMap = 77;
+
+        //backspace or escape for dismiss action
+        keyMapping.dismissBS = 8;
+        keyMapping.dismissES = 27;
+
+
+        ///TODO: customizable key mapping
 
         if (events.indexOf('move-all') !== -1 || events.indexOf('move-left') !== -1) {
             keyBoardEvents[keyMapping.left] = function () {              //left
@@ -266,6 +430,105 @@
                 canvas.dispatchEvent(event);
             }
         }
+
+        if(events.indexOf('action-1')) {
+            keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = function () {
+                event = new CustomEvent('action-1');
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(events.indexOf('action-2')) {
+            keyBoardEvents[keyMapping.action2L] = keyBoardEvents[keyMapping.action2N] = keyBoardEvents[keyMapping.action2NP] = keyBoardEvents[keyMapping.action2Strg] = function () {
+                event = new CustomEvent('action-2');
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(events.indexOf('action-3')) {
+            keyBoardEvents[keyMapping.action3L] = keyBoardEvents[keyMapping.action3N] = keyBoardEvents[keyMapping.action3NP] = keyBoardEvents[keyMapping.action3Alt] = function () {
+                event = new CustomEvent('action-3');
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        if(events.indexOf('action-4')) {
+            keyBoardEvents[keyMapping.action4L] = keyBoardEvents[keyMapping.action4N] = keyBoardEvents[keyMapping.action4NP] = keyBoardEvents[keyMapping.action4Space] = function () {
+                event = new CustomEvent('action-4');
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        //zooming
+        if(events.indexOf('zoom')) {
+            keyBoardEvents[keyMapping.zoomInNP] = keyBoardEvents[keyMapping.zoomInL] = function () {
+                event = new CustomEvent('zoom');
+                event.scale = 0.1;
+                canvas.dispatchEvent(event);
+            };
+
+            keyBoardEvents[keyMapping.zoomOutNP] = keyBoardEvents[keyMapping.zoomOutL] = function () {
+                event = new CustomEvent('zoom');
+                event.scale = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+        //rotating
+        if(events.indexOf('rotate')) {
+            keyBoardEvents[keyMapping.rotateRightNP] = keyBoardEvents[keyMapping.rotateRightL] = function () {
+                event = new CustomEvent('rotate');
+                event.rotation = 0.1;
+                canvas.dispatchEvent(event);
+            };
+
+            keyBoardEvents[keyMapping.rotateLeftNP] = keyBoardEvents[keyMapping.rotateLeftL] = function () {
+                event = new CustomEvent('rotate');
+                event.rotation = -0.1;
+                canvas.dispatchEvent(event);
+            }
+        }
+
+
+        //open menu
+        if(events.indexOf('open-menu')) {
+            keyBoardEvents[keyMapping.openMenu] = function () {
+                event = new CustomEvent('open-menu');
+                canvas.dispatchEvent(event);
+
+                //hide touch menu button and touch map button if they are there
+                hideTouchMenuButton();
+                hideTouchMapButton();
+                showTouchDismissButton();
+            }
+        }
+
+        //open map
+        if(events.indexOf('open-map')) {
+            keyBoardEvents[keyMapping.openMap] = function () {
+                event = new CustomEvent('open-map');
+                canvas.dispatchEvent(event);
+
+                hideTouchMapButton();
+                showTouchDismissButton();
+            }
+        }
+
+        //dismiss
+        if(events.indexOf('dismiss')) {
+            keyBoardEvents[keyMapping.dismissBS] = keyBoardEvents[keyMapping.dismissES] = function () {
+                event = new CustomEvent('dismiss');
+                canvas.dispatchEvent(event);
+
+                showTouchMapButton();
+                showTouchMenuButton();
+                hideTouchDismissButton();
+            }
+        }
+
+        // document.addEventListener('keydown', function (e) {
+        //     console.log(e.keyCode);
+        // });
 
 
 
@@ -756,6 +1019,8 @@
                 }
             });
         });
+
+        _gn.setHeadDirection()
     }
 
 
@@ -860,6 +1125,7 @@
 
             setJoystickStyle(dom, joystickSize);                                                                      //TODO resize on rezise window and orientation change
 
+            //hide joystick at the beginning until no gyrosope is detected
             if(canvas.indieGameEvents.settings.useGyroscope) {
                 dom.joystick.wrapper.style.display = 'none';
             }
@@ -901,7 +1167,7 @@
 
         /* if we use buttons for the touch movements */
         else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions) {
-            var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 110,
+            var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 130,
                 directionButtonMargin = 2, buttonEvents;
 
             directionButtonSize = Math.min(Math.max(smallestDirectionButtonsSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestDirectionButtonSize);
@@ -982,15 +1248,22 @@
             dom.overlay.appendChild(dom.directionButtons.wrapper);
             translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
 
+            //hide direction buttons at the beginning until no gyrosope is detected
             if(canvas.indieGameEvents.settings.useGyroscope) {
                 dom.directionButtons.wrapper.style.display = 'none';
             }
         }
 
         if ((events.indexOf('action-1') !== -1 && !canvas.indieGameEvents.settings.doubleTabAction1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
-            var smallestActionButtonValue = 60, highestActionButtonValue = 100, actionButtonSize;
+            var smallestActionButtonValue = 70, highestActionButtonValue = 140, actionButtonSize;
 
             actionButtonSize = Math.min(Math.max(smallestActionButtonValue, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestActionButtonValue);
+
+            if(overlayRectSize.width < overlayRectSize.height) {
+                actionButtonSize = Math.min(Math.max(smallestActionButtonValue, overlayRectSize.height * 0.14), highestActionButtonValue);
+            }
+
+            console.log(actionButtonSize);
 
             dom.actionButtons = {};
             dom.actionButtons.wrapper = document.createElement('div');
@@ -1039,19 +1312,19 @@
         }
 
         if (events.indexOf('open-map') !== -1) {
-            var mapButtonSize, minMapButtonSize = 60, maxMapButtonSize = 100, mapButtonPosition;
+            var mapButtonSize, minMapButtonSize = 60, maxMapButtonSize = 130, mapButtonPosition;
 
             mapButtonSize = ~~Math.min(Math.max(minMapButtonSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), maxMapButtonSize);
 
 
-            if (overlayRectSize.height < overlayRectSize.width && overlayRectSize.width > 600) {
+            if (overlayRectSize.height < overlayRectSize.width - 200 && overlayRectSize.width > 600) {
                 mapButtonPosition = {left: overlayRectSize.width / 2 - mapButtonSize - 10, bottom: 20};
             }
 
             else {
                 mapButtonPosition = {
                     left: overlayRectSize.width - mapButtonSize - 30,
-                    bottom: overlayRectSize.height - mapButtonSize * 2 - 50
+                    bottom: overlayRectSize.height - mapButtonSize * 2 - 70
                 };
             }
 
@@ -1086,7 +1359,7 @@
 
 
         if (events.indexOf('dismiss') !== -1 && canvas.indieGameEvents.settings.touchDismissButton) {
-            var dismissButtonSize, dismissButtonMinSize = 60, dismissButtonMaxSize = 100;
+            var dismissButtonSize, dismissButtonMinSize = 60, dismissButtonMaxSize = 130;
 
             dismissButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
 
@@ -1103,7 +1376,8 @@
                 "pointer-events: all; position: absolute; color: white; background-color: black; opacity: 0.5; border: none; z-index: 210; display: none;"
             );
 
-            document.body.appendChild(dom.dismissButton);
+            dom.overlay.appendChild(dom.dismissButton);
+            //document.body.appendChild(dom.dismissButton);
 
             if (isTouchDevice()) {
                 dom.dismissButton.addEventListener('touchstart', function (e) {
@@ -1122,11 +1396,11 @@
 
 
         if (events.indexOf('open-menu') && canvas.indieGameEvents.settings.menuButton) {
-            var menuButtonSize, menuButtonMinSize = 60, menuButtonMaxSize = 100, menuButtonPosition;
+            var menuButtonSize, menuButtonMinSize = 60, menuButtonMaxSize = 130, menuButtonPosition;
 
             menuButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
 
-            if (overlayRectSize.height < overlayRectSize.width && overlayRectSize.width > 600) {
+            if (overlayRectSize.height < overlayRectSize.width  - 200 && overlayRectSize.width > 600) {
                 menuButtonPosition = {left: overlayRectSize.width / 2 + 10, bottom: 20};
             }
 
@@ -1169,6 +1443,7 @@
 
 
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
+
     }
 
     //on fullscreen change position of canvas
@@ -1231,7 +1506,7 @@
         var target = prepareTarget(e);
 
         if (target instanceof HTMLButtonElement) {
-            canvas.dispatchEvent(createNewEvent('open-menu'));
+            canvas.dispatchEvent(new CustomEvent('open-menu'));
             dom.menuButton.style.display = 'none';
 
             if (dom.mapButton) {
@@ -1249,7 +1524,7 @@
         var target = prepareTarget(e);
 
         if (target instanceof HTMLButtonElement) {
-            canvas.dispatchEvent(createNewEvent('dismiss'));
+            canvas.dispatchEvent(new CustomEvent('dismiss'));
             dom.dismissButton.style.display = 'none';
 
             if (dom.mapButton) {
@@ -1265,7 +1540,7 @@
         var target = prepareTarget(e);
 
         if (target instanceof HTMLButtonElement) {
-            canvas.dispatchEvent(createNewEvent('open-map'));
+            canvas.dispatchEvent(new CustomEvent('open-map'));
 
             dom.mapButton.style.display = 'none';
 
@@ -1323,8 +1598,8 @@
             "position: absolute; " +
             "width:" + actionButtonSize * 3 + "px; " +
             "height:" + actionButtonSize * 3 + "px;" +
-            "bottom:" + 20 + "px;" +
-            "right:" + 20 + "px"
+            "bottom:" + 30 + "px;" +
+            "right:" + 35 + "px"
         );
     }
 
@@ -1379,8 +1654,12 @@
     }
 
     function actionTouchButtonEventDispatchLoop(target, buttonField ,canvas) {
+        var event;
+
         if (target instanceof HTMLButtonElement && target.name) {
-            canvas.dispatchEvent(createNewEvent(target.name));
+            event = new CustomEvent(target.name);
+            event.strength = 100;
+            canvas.dispatchEvent(event);
 
             if(target.buttonPressed){
                 target.buttonPressed = window.requestAnimationFrame(function () {actionTouchButtonEventDispatchLoop(target, buttonField, canvas)});
@@ -1651,7 +1930,7 @@
         for (var key in dom.directionButtons) {
             if (dom.directionButtons.hasOwnProperty(key)) {
                 if (dom.directionButtons[key] instanceof HTMLButtonElement) {
-                    dom.directionButtons[key].setAttribute("style", "pointer-events: all; position: absolute; color: white; background-color: black; width:" + (buttonSize + leftRightBig / 4 + upDownBig * 2) + "px; height:" + (buttonSize + (leftRightBig * 2) + upDownBig / 4) + "px; border: none; margin: " + margin + "px; opacity: 0.5; border-radius: 3px; top:" + (positions[key].top - leftRightBig) + "px; left:" + (positions[key].left - upDownBig) + "px;");
+                    dom.directionButtons[key].setAttribute("style", "pointer-events: all; position: absolute; color: white; background-color: black; width:" + (buttonSize + leftRightBig / 4 + upDownBig * 2) + "px; height:" + (buttonSize + (leftRightBig * 2) + upDownBig / 4) + "px; border: none; margin: " + margin + "px; opacity: 0.5; border-radius: 3px; top:" + (positions[key].top - leftRightBig) + "px; left:" + (positions[key].left - upDownBig) + "px; font-size:" + ~~(buttonSize/4) +"px;");
                 }
             }
         }
@@ -1710,11 +1989,14 @@
     }
 
     function dispatchMoveButtonEvents(target, canvas, buttonEvents, buttonField) {
+        var event;
 
         if (target.name) {
             for (var key in buttonEvents[target.name]) {
                 if (buttonEvents[target.name].hasOwnProperty(key)) {
-                    canvas.dispatchEvent(createNewEvent(buttonEvents[target.name][key]));
+                    event = new CustomEvent(buttonEvents[target.name][key]);
+                    event.strength = 100;
+                    canvas.dispatchEvent(event);
                 }
             }
         }
@@ -1784,19 +2066,6 @@
         }
 
         return count;
-    }
-
-    /* internet explorer workaround */
-    function createNewEvent(eventName) {
-        var event;
-        if (typeof(Event) === 'function') {
-            event = new Event(eventName);
-        } else {
-            event = document.createEvent('Event');
-            event.initEvent(eventName, true, true);
-        }
-
-        return event;
     }
 
     /*https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API*/

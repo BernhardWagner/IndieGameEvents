@@ -8,8 +8,8 @@ bw.test1 = (function () {
         var canvas = document.getElementById('canvas'),
             ctx = canvas.getContext("2d");
         canvas.registerIndieGameEvents({
-            events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump
-            touchDirectionController: 'joystick',
+            events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump //zooming with keybaord + and - //keyboard rotate with numpad / * or i o
+            touchDirectionController: 'buttons',
             touchJoystickAccuracy: 'smooth', //stength of the touch controller directions will get more accurate //smooth directions
             useWASDDirections: true,
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
@@ -17,19 +17,17 @@ bw.test1 = (function () {
 
         //bei zoom unt rotate event immer += verwenden für value
 
-        canvas.onclick = function () {
-
-
-            if (canvas.requestFullscreen) {
-                canvas.requestFullscreen();
-            } else if (canvas.msRequestFullscreen) {
-                canvas.msRequestFullscreen();
-            } else if (canvas.mozRequestFullScreen) {
-                canvas.mozRequestFullScreen();
-            } else if (canvas.webkitRequestFullscreen) {
-                canvas.webkitRequestFullscreen();
-            }
-        };
+        // canvas.onclick = function () {
+        //     if (canvas.requestFullscreen) {
+        //         canvas.requestFullscreen();
+        //     } else if (canvas.msRequestFullscreen) {
+        //         canvas.msRequestFullscreen();
+        //     } else if (canvas.mozRequestFullScreen) {
+        //         canvas.mozRequestFullScreen();
+        //     } else if (canvas.webkitRequestFullscreen) {
+        //         canvas.webkitRequestFullscreen();
+        //     }
+        // };
 
         var x = 500, y = 200, zoom = 1;
 
@@ -45,7 +43,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('move-left', function (e) {
            // console.log("left");
-           // console.log(e.strength);
+           //console.log(e.strength);
             x -= e.strength/100;
         });
 
@@ -64,6 +62,11 @@ bw.test1 = (function () {
            zoom += e.scale;
         });
 
+        canvas.addEventListener('rotate', function (e) {
+            console.log(e.rotation);
+            zoom += e.rotation;
+        });
+
         canvas.addEventListener('action-1', function () {
             console.log("action1");
         });
@@ -78,6 +81,10 @@ bw.test1 = (function () {
 
         canvas.addEventListener('action-4', function () {
             console.log("action4");
+        });
+
+        canvas.addEventListener('dismiss', function () {
+            console.log("dismiss");
         });
 
         draw();
