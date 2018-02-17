@@ -4,7 +4,7 @@
 
 //OWN LIBRARY
 //self invoking functions und closures erklären (JA)
-(function () {
+var indieGameEvents = (function () {
     /*GLOBALS*/
     //standard settings for the library
     var _standardSettings,
@@ -66,14 +66,19 @@
     _webkitGamepadAPI = 'WebKitGamepadEvent' in window;
 
 
-    HTMLCanvasElement.prototype.registerIndieGameEvents = function (settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
+    function registerIndieGameEvents (element, settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
         //"this" is the canvasElement
 
+        if(!(element instanceof HTMLCanvasElement)) {
+            console.error("You can only register HTML5 Canvas Elements");
+            return;
+        }
+
         //creates an empty object for the library
-        this.indieGameEvents = {};
+        element.indieGameEvents = {};
 
         //sets the settings for the events (either standard settings or user settings when defined)
-        this.indieGameEvents.settings = {
+        element.indieGameEvents.settings = {
             events: settings.events || _standardSettings.events,                                                        //TODO: determine that inputs are correct
             physicalInputs: settings.physicalInputs || _standardSettings.physicalInputs,
             useWASDDirections: settings.useWASDDirections || _standardSettings.useWASDDirections,
@@ -89,54 +94,64 @@
 
         };
 
-        //TODO on keyboardpress f7 turn off touch or turn it on again when turned off
+        element.indieGameEvents.hammer = new _Hammer(element, {preventDefault: true}); //registers Hammer.js for the canvas
+        element.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
+        element.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
 
-        this.indieGameEvents.hammer = new _Hammer(this, {preventDefault: true}); //registers Hammer.js for the canvas
-        this.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
-        this.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
+        window.addEventListener('keyup', function(e) {keyboardUpEvents(e, element)});
 
-        eventTranslator(this);                                                              //main function, translates the physical events to the right events
+        eventTranslator(element);                                                              //main function, translates the physical events to the right events
 
-        return this.indieGameEvents; //the object where you can do something with //TODO should be there or not?
+        return element.indieGameEvents; //the object where you can do something with //TODO should be there or not?
     };
 
-    HTMLCanvasElement.prototype.hideIndieGameTouchInterface = function () {
-        if (this.indieGameEvents.touchInterface && this.indieGameEvents.touchInterface.domElements && this.indieGameEvents.touchInterface.domElements.overlay) {
-            this.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
+    function hideIndieGameTouchInterface(element) {
+        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
+            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
 
-            if (this.indieGameEvents.touchInterface.domElements.dismissButton) {
-                this.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
+                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     };
 
-    HTMLCanvasElement.prototype.showIndieGameTouchInterface = function () {
-        if (this.indieGameEvents.touchInterface && this.indieGameEvents.touchInterface.domElements && this.indieGameEvents.touchInterface.domElements.overlay) {
-            this.indieGameEvents.touchInterface.domElements.overlay.style.display = 'block';
+    function showIndieGameTouchInterface (element) {
+        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
+            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'block';
 
-            if (this.indieGameEvents.touchInterface.domElements.dismissButton) {
-                this.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
+                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     };
 
-    HTMLCanvasElement.prototype.hideIndieGameTouchInterfaceWithoutX = function () {
-        if (this.indieGameEvents.touchInterface && this.indieGameEvents.touchInterface.domElements && this.indieGameEvents.touchInterface.domElements.overlay) {
-            this.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
+    function hideIndieGameTouchInterfaceWithoutX (element) {
+        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
+            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
 
-            if (this.indieGameEvents.touchInterface.domElements.dismissButton) {
-                this.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
+                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     };
 
-    HTMLCanvasElement.prototype.showTouchDismissButton = function () {
-        if (this.indieGameEvents.touchInterface && this.indieGameEvents.touchInterface.domElements && this.indieGameEvents.touchInterface.domElements.overlay) {
-            if (this.indieGameEvents.touchInterface.domElements.dismissButton) {
-                this.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+    function showTouchDismissButton(canvas) {
+        if (canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
+            if (canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
+                canvas.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     };
+
+    function toggleTouchInterface(canvas) {
+        if(canvas && canvas.indieGameEvents && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
+            if(canvas.indieGameEvents.touchInterface.domElements.overlay.style.display === 'none'){
+                showIndieGameTouchInterface(canvas);
+            } else {
+                hideIndieGameTouchInterface(canvas);
+            }
+        }
+    }
 
 
     /*MAIN*/
@@ -535,8 +550,12 @@
         KeyboardController(keyBoardEvents);
     }
 
-    function keyboardUpEvents(e, canvas, events) {
-
+    function keyboardUpEvents(e, canvas) {
+        switch (e.keyCode) {
+            case 118:
+                toggleTouchInterface(canvas);
+                break;
+        }
     }
 
     /*GAMEPAD */
@@ -1027,12 +1046,13 @@
     function translateGyroscopeValues(data, canvas, orientation) {
         var alpha, beta, gamma, event;
 
+        //calibrate gyroscope to get the standard position of the device
         if(_gyroCalibration.calibrate) {
             _gyroCalibration.alpha = data.do.alpha;
             _gyroCalibration.beta = data.do.beta;
             _gyroCalibration.gamma = data.do.gamma;
             _gyroCalibration.calibrate = false;
-            console.log('calibrate');
+            //console.log('calibrate');
         }
 
 
@@ -1068,6 +1088,8 @@
         if (beta < -10 && beta > -90) {
             event = new CustomEvent('move-up');
 
+            //console.log(beta);
+
             if(beta > -30) {
                 event.strength = beta.map(-10, -45, 0, 100);
             } else {
@@ -1085,7 +1107,7 @@
                 event.strength = 100;
             }
 
-            console.log(event.strength);
+            //console.log(event.strength);
 
             canvas.dispatchEvent(event);
         }
@@ -1263,7 +1285,7 @@
                 actionButtonSize = Math.min(Math.max(smallestActionButtonValue, overlayRectSize.height * 0.14), highestActionButtonValue);
             }
 
-            console.log(actionButtonSize);
+            //console.log(actionButtonSize);
 
             dom.actionButtons = {};
             dom.actionButtons.wrapper = document.createElement('div');
@@ -1441,6 +1463,10 @@
             }
         }
 
+        if(events.indexOf('zoom')) {
+            //TODO
+        }
+
 
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
 
@@ -1472,12 +1498,6 @@
         }
     }
 
-    function showTouchMenuButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.menuButton) {
-            canvas.indieGameEvents.touchInterface.domElements.menuButton.style.display = "block";
-        }
-    }
-
     function hideTouchMapButton() {
         if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
             canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "none";
@@ -1487,12 +1507,6 @@
     function showTouchMapButton() {
         if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
             canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "block";
-        }
-    }
-
-    function showTouchDismissButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
-            canvas.indieGameEvents.touchInterface.domElements.dismissButton.style.display = "block";
         }
     }
 
@@ -2155,6 +2169,14 @@
 
     }
 
+    return {
+        register: registerIndieGameEvents,
+        showTouchInterface: showIndieGameTouchInterface,
+        hideTouchInterface: hideIndieGameTouchInterface,
+        hideTouchInterfaceWithoutX: hideIndieGameTouchInterfaceWithoutX,
+        showTouchDismissButton: showTouchDismissButton
+    }
+
 
 })();
 
@@ -2167,9 +2189,9 @@
 //TODO scrollen und drehen nicht vergessen
 //TODO swipe for movements?
 //TODO gyroscope doesent work right
-//TODO fullscreen?
 //TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
 //TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) und bei touch zweiten joystick generieren???
+//TODO add zoom buttons on touch interface
 
 /*Custom Events (IE support)*/
 (function () {
