@@ -70,8 +70,7 @@ var indieGameEvents = (function () {
         //"this" is the canvasElement
 
         if(!(element instanceof HTMLCanvasElement)) {
-            console.error("You can only register HTML5 Canvas Elements");
-            return;
+            throw new TypeError("IndieGameEvents: You can only register HTML5 Canvas Elements");
         }
 
         //creates an empty object for the library
@@ -98,12 +97,14 @@ var indieGameEvents = (function () {
         element.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
         element.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
 
+        element.indieGameEvents.eventStates = prepareEventStateArray();
+
         window.addEventListener('keyup', function(e) {keyboardUpEvents(e, element)});
 
         eventTranslator(element);                                                              //main function, translates the physical events to the right events
 
         return element.indieGameEvents; //the object where you can do something with //TODO should be there or not?
-    };
+    }
 
     function hideIndieGameTouchInterface(element) {
         if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
@@ -113,7 +114,7 @@ var indieGameEvents = (function () {
                 element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
-    };
+    }
 
     function showIndieGameTouchInterface (element) {
         if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
@@ -123,7 +124,7 @@ var indieGameEvents = (function () {
                 element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
-    };
+    }
 
     function hideIndieGameTouchInterfaceWithoutX (element) {
         if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
@@ -133,7 +134,7 @@ var indieGameEvents = (function () {
                 element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
-    };
+    }
 
     function showTouchDismissButton(canvas) {
         if (canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
@@ -141,7 +142,7 @@ var indieGameEvents = (function () {
                 canvas.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
-    };
+    }
 
     function toggleTouchInterface(canvas) {
         if(canvas && canvas.indieGameEvents && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
@@ -150,6 +151,16 @@ var indieGameEvents = (function () {
             } else {
                 hideIndieGameTouchInterface(canvas);
             }
+        }
+    }
+
+    //returns true (or the strenght or the zoom/scale factor) if an action is active (Button is pressed) can be used in an draw-Loop to poll event states, returns undifined if event is not recognized
+    //and false on inactive event states
+    function getEventState(canvas, event) {
+        if(canvas && canvas.indieGameEvents) {
+            return canvas.indieGameEvents.eventStates[event];
+        } else {
+            throw new TypeError("Given Value must be from type canvas and has be registered for the indieGameEvents");
         }
     }
 
@@ -287,8 +298,212 @@ var indieGameEvents = (function () {
     
     
     //MOUSE
-    function registerMouseEvents() {
+    function registerMouseEvents(canvas, events, settings) {
+        var oldClientX = 0, clickPosition, data, eventDispatchID, point;
+
+        point = document.createElement("div");
+        point.setAttribute("style",
+            "position: absolute; " +
+            "width:" + 10 + "px; " +
+            "height:" + 10 + "px; " +
+            "background-color: " + "black;" +
+            "opacity: " + 0.3 + ";" +
+            "border-radius: 100%;" +
+            "display: " + "none;" +
+            "top: " + "0;" +
+            "left: " + "0;"
+        );
+
+        document.body.appendChild(point);
+
+
+        //zoom
+        if (events.indexOf("zoom") !== -1) {
+            canvas.addEventListener("wheel", function (e) {
+                translateMouseWheelAction(e, canvas, events, settings)
+            });
+        }
+
+        if (events.indexOf("rotate")) {
+            canvas.addEventListener('mousedown', mouseDown, false);
+            window.addEventListener('mouseup', mouseUp, false);
+
+
+        }
+
+        function mouseUp(e) {
+            window.removeEventListener('mousemove', moveRotate, true);
+
+            if (e.which === 2) {
+                if (eventDispatchID) {
+                    window.cancelAnimationFrame(eventDispatchID);
+                    eventDispatchID = null;
+                }
+
+                removePoint();
+                window.removeEventListener('mousemove', moveMove, true);
+
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+            }
+
+            canvas.style.cursor = "default";
+        }
+
+        function mouseDown(e) {
+            clickPosition = {x: e.clientX, y: e.clientY};
+            oldClientX = e.clientX;
+            window.addEventListener('mousemove', moveRotate, true);
+
+            //middle mouse button
+            if (e.which === 2) {
+                setPoint(clickPosition);
+                window.addEventListener('mousemove', moveMove, true);
+
+                return e.preventDefault();
+            }
+        }
+
+        function moveRotate(e) {
+            var event, deltaX;
+
+            if (e.shiftKey) {
+                canvas.style.cursor = "e-resize";
+                deltaX = e.clientX - oldClientX;
+
+                event = new CustomEvent('rotate');
+                event.rotation = deltaX / 100;
+
+                canvas.dispatchEvent(event);
+            }
+            oldClientX = e.clientX;
+        }
+
+        function moveMove(e) {
+            var distance, strength, angle;
+
+            distance = getDistance({x: e.clientX, y: e.clientY}, clickPosition);
+            strength = Math.min(~~distance.map(0, 400, 0, 100), 100);
+            angle = getAngle(clickPosition, {x: e.clientX, y: e.clientY});
+
+            if (eventDispatchID) {
+                window.cancelAnimationFrame(eventDispatchID);
+                eventDispatchID = null;
+            }
+
+            eventDispatchID = window.requestAnimationFrame(function() {moveLoop(distance, strength, angle)});
+        }
         
+        function setPoint() {
+            if(point) {
+                point.style.display = "block";
+                point.style.top = clickPosition.y + "px";
+                point.style.left = clickPosition.x + "px";
+            }
+        }
+        
+        function removePoint() {
+            if(point) {
+                point.style.display = "none";
+            }
+        }
+
+
+        function moveLoop(distance, strength, angle) {
+            var event, strengthDampen;
+
+            if (distance > 10) {
+                if (angle < 90 && angle > -90 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('right');
+                    event = new CustomEvent('move-right');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > 45 || angle < -45) {
+                        strengthDampen = (angle > 0) ? angle.map(90, 45, 0, 1): angle.map(-90, -45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-left"] = false;
+                    canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+                }
+
+                if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
+                    // console.log('down');
+                    event = new CustomEvent('move-down');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > 135 || angle < 45) {
+                        strengthDampen = (angle > 90) ? angle.map(180, 135, 0, 1): angle.map(0, 45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-up"] = false;
+                    canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+                }
+
+                if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
+                    event = new CustomEvent('move-left');
+
+                    if((angle > -135 && angle < 0) || (angle < 135 && angle > 0)) {
+                        strengthDampen = (angle < -90) ? angle.map(-90, -135, 0, 1): angle.map(90, 135, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-right"] = false;
+                    canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                    // console.log(angle);
+                }
+
+                if (angle < 0 && angle > -180 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
+                    //console.log('up');
+                    event = new CustomEvent('move-up');
+
+                    //keep 100 strength for a time then fall off when angle is to low/high
+                    if(angle > -45 || angle < -135) {
+                        strengthDampen = (angle < -90) ? angle.map(-180, -135, 0, 1): angle.map(0, -45, 0, 1);
+                    } else {strengthDampen = 1}
+
+                    event.strength = strength * strengthDampen;
+                    canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-down"] = false;
+                    canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                }
+            }
+
+            else {
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+            }
+
+            eventDispatchID = window.requestAnimationFrame(function() {moveLoop(distance, strength, angle)});
+        }
+    }
+
+
+
+    function  translateMouseWheelAction(e, canvas, events, settings) {
+        var event;
+
+        //zooming is possible with alt and strg key
+        if(e.altKey || e.ctrlKey) {
+            event = new CustomEvent('zoom');
+            event.scale = e.deltaY / -1000;
+
+            canvas.dispatchEvent(event);
+
+            e.preventDefault();
+        }
     }
 
     //Events that should not trigger every single frame change
@@ -339,10 +554,11 @@ var indieGameEvents = (function () {
 
     /*KEYBOARD*/
     function registerKeyboardEvents(canvas, events, settings) {
-        var event, keyBoardEvents, keyMapping;
+        var event, keyBoardEvents, keyMapping, keyEventMap;
 
         keyBoardEvents = {};
         keyMapping = {};
+        keyEventMap = {};
 
         if (canvas.indieGameEvents.settings.useWASDDirections) {
             keyMapping.left = 65;
@@ -412,13 +628,25 @@ var indieGameEvents = (function () {
         keyMapping.dismissES = 27;
 
 
-        ///TODO: customizable key mapping
+        //to get the key up right
+        keyEventMap[keyMapping.left] = "move-left";
+        keyEventMap[keyMapping.right] = "move-right";
+        keyEventMap[keyMapping.up] = "move-up";
+        keyEventMap[keyMapping.down] = "move-down";
+        keyEventMap[keyMapping.action1Space] = keyEventMap[keyMapping.action1NP] = keyEventMap[keyMapping.action1N] = keyEventMap[keyMapping.action1L] = "action-1";
+        keyEventMap[keyMapping.action2Strg] = keyEventMap[keyMapping.action2NP] = keyEventMap[keyMapping.action2N] = keyEventMap[keyMapping.action2L] = "action-2";
+        keyEventMap[keyMapping.action3Alt] = keyEventMap[keyMapping.action3NP] = keyEventMap[keyMapping.action3N] = keyEventMap[keyMapping.action3L] = "action-3";
+        keyEventMap[keyMapping.action4Shift] = keyEventMap[keyMapping.action4NP] = keyEventMap[keyMapping.action4N] = keyEventMap[keyMapping.action4L] = "action-4";
+        keyEventMap[keyMapping.zoomInNP] = keyEventMap[keyMapping.zoomInL] = keyEventMap[keyMapping.zoomOutNP] = keyEventMap[keyMapping.zoomOutL] = "zoom";
+        keyEventMap[keyMapping.rotateLeftNP] =  keyEventMap[keyMapping.rotateLeftL] = keyEventMap[keyMapping.rotateRightNP] =  keyEventMap[keyMapping.rotateRightL]  = "rotate";
 
         if (events.indexOf('move-all') !== -1 || events.indexOf('move-left') !== -1) {
             keyBoardEvents[keyMapping.left] = function () {              //left
                 event = new CustomEvent('move-left');
                 event.strength = 100;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['move-left'] = 100;
             }
         }
 
@@ -427,6 +655,8 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-right');
                 event.strength = 100;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['move-right'] = 100;
             }
         }
 
@@ -435,6 +665,8 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-up');
                 event.strength = 100;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['move-up'] = 100;
             }
         }
 
@@ -443,6 +675,8 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-down');
                 event.strength = 100;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['move-down'] = 100;
             }
         }
 
@@ -450,6 +684,8 @@ var indieGameEvents = (function () {
             keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = function () {
                 event = new CustomEvent('action-1');
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['action-1'] = true;
             }
         }
 
@@ -457,6 +693,8 @@ var indieGameEvents = (function () {
             keyBoardEvents[keyMapping.action2L] = keyBoardEvents[keyMapping.action2N] = keyBoardEvents[keyMapping.action2NP] = keyBoardEvents[keyMapping.action2Strg] = function () {
                 event = new CustomEvent('action-2');
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['action-2'] = true;
             }
         }
 
@@ -464,6 +702,8 @@ var indieGameEvents = (function () {
             keyBoardEvents[keyMapping.action3L] = keyBoardEvents[keyMapping.action3N] = keyBoardEvents[keyMapping.action3NP] = keyBoardEvents[keyMapping.action3Alt] = function () {
                 event = new CustomEvent('action-3');
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['action-3'] = true;
             }
         }
 
@@ -471,6 +711,8 @@ var indieGameEvents = (function () {
             keyBoardEvents[keyMapping.action4L] = keyBoardEvents[keyMapping.action4N] = keyBoardEvents[keyMapping.action4NP] = keyBoardEvents[keyMapping.action4Space] = function () {
                 event = new CustomEvent('action-4');
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['action-4'] = true;
             }
         }
 
@@ -480,12 +722,17 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('zoom');
                 event.scale = 0.1;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['zoom'] = 0.1;
+
             };
 
             keyBoardEvents[keyMapping.zoomOutNP] = keyBoardEvents[keyMapping.zoomOutL] = function () {
                 event = new CustomEvent('zoom');
                 event.scale = -0.1;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['zoom'] = -0.1;
             }
         }
 
@@ -495,12 +742,16 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('rotate');
                 event.rotation = 0.1;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['rotate'] = 0.1;
             };
 
             keyBoardEvents[keyMapping.rotateLeftNP] = keyBoardEvents[keyMapping.rotateLeftL] = function () {
                 event = new CustomEvent('rotate');
                 event.rotation = -0.1;
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates['rotate'] = -0.1;
             }
         }
 
@@ -547,7 +798,7 @@ var indieGameEvents = (function () {
 
 
 
-        KeyboardController(keyBoardEvents);
+        KeyboardController(keyBoardEvents, canvas.indieGameEvents.eventStates, keyEventMap);
     }
 
     function keyboardUpEvents(e, canvas) {
@@ -672,10 +923,20 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-left');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = false;
             }
         }
 
@@ -684,10 +945,19 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-up');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
             }
         }
 
@@ -698,10 +968,20 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-left');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = false;
             }
         }
 
@@ -710,10 +990,20 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-up');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
             }
         }
 
@@ -723,10 +1013,20 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-left');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = false;
             }
         }
 
@@ -735,10 +1035,20 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-up');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = false;
             }
         }
 
@@ -756,10 +1066,19 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-left');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-left"] = false;
             }
         }
 
@@ -768,10 +1087,19 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('move-up');
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-down"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
+
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+            } else {
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
             }
         }
 
@@ -784,19 +1112,35 @@ var indieGameEvents = (function () {
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-1"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-1"] = false;
         }
+
         if (events.indexOf('action-2') !== -1 && i === 1) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-2"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-2"] = false;
         }
+
         if (events.indexOf('action-3') !== -1 && i === 2) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-3"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-3"] = false;
         }
+
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-4"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-4"] = false;
         }
+
 
 
 
@@ -861,19 +1205,35 @@ var indieGameEvents = (function () {
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-1"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-1"] = false;
         }
+
         if (events.indexOf('action-2') !== -1 && i === 2) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-2"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-2"] = false;
         }
+
         if (events.indexOf('action-3') !== -1 && i === 1) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-3"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-3"] = false;
         }
+
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
+            canvas.indieGameEvents.eventStates["action-4"] = true;
+        } else {
+            canvas.indieGameEvents.eventStates["action-4"] = false;
         }
+
 
 
 
@@ -1072,6 +1432,9 @@ var indieGameEvents = (function () {
                 event.strength = 100;
             }
             canvas.dispatchEvent(event);
+
+            canvas.indieGameEvents.eventStates['move-right'] = false;
+            canvas.indieGameEvents.eventStates['move-left'] = event.strength;
         }
         else if (gamma > 10 && gamma < 90) {
             event = new CustomEvent('move-right');
@@ -1083,6 +1446,9 @@ var indieGameEvents = (function () {
             }
 
             canvas.dispatchEvent(event);
+
+            canvas.indieGameEvents.eventStates['move-left'] = false;
+            canvas.indieGameEvents.eventStates['move-right'] = event.strength;
         }
 
         if (beta < -10 && beta > -90) {
@@ -1097,6 +1463,9 @@ var indieGameEvents = (function () {
             }
 
             canvas.dispatchEvent(event);
+
+            canvas.indieGameEvents.eventStates['move-down'] = false;
+            canvas.indieGameEvents.eventStates['move-up'] = event.strength;
         }
         else if (beta > 10 && beta < 90) {
             event = new CustomEvent('move-down');
@@ -1110,6 +1479,16 @@ var indieGameEvents = (function () {
             //console.log(event.strength);
 
             canvas.dispatchEvent(event);
+
+            canvas.indieGameEvents.eventStates['move-up'] = false;
+            canvas.indieGameEvents.eventStates['move-down'] = event.strength;
+        }
+
+        else {
+            canvas.indieGameEvents.eventStates['move-up'] = false;
+            canvas.indieGameEvents.eventStates['move-down'] = false;
+            canvas.indieGameEvents.eventStates['move-left'] = false;
+            canvas.indieGameEvents.eventStates['move-right'] = false;
         }
 
     }
@@ -1282,7 +1661,7 @@ var indieGameEvents = (function () {
             actionButtonSize = Math.min(Math.max(smallestActionButtonValue, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestActionButtonValue);
 
             if(overlayRectSize.width < overlayRectSize.height) {
-                actionButtonSize = Math.min(Math.max(smallestActionButtonValue, overlayRectSize.height * 0.14), highestActionButtonValue);
+                actionButtonSize = Math.min(Math.min(smallestActionButtonValue, overlayRectSize.height * 0.14), highestActionButtonValue);
             }
 
             //console.log(actionButtonSize);
@@ -1464,7 +1843,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('zoom')) {
-            //TODO
+            //TODO add + and - symbol
         }
 
 
@@ -1659,6 +2038,7 @@ var indieGameEvents = (function () {
 
         for (var target in targets) {
             if (targets.hasOwnProperty(target)) {
+                canvas.indieGameEvents.eventStates[targets[target].name] = true;
                 targets[target].buttonPressed = window.requestAnimationFrame(function () {
                     actionTouchButtonEventDispatchLoop(targets[target], buttonField, canvas)
                 });
@@ -1700,6 +2080,7 @@ var indieGameEvents = (function () {
         for(var target in targets) {
             if(targets.hasOwnProperty(target)) {
                 if (targets[target].buttonPressed) {
+                    canvas.indieGameEvents.eventStates[targets[target].name] = false;
                     window.cancelAnimationFrame(targets[target].buttonPressed);
                     targets[target].buttonPressed = false;
                 }
@@ -1825,13 +2206,17 @@ var indieGameEvents = (function () {
         //less accurate (standard mode)
         if(canvas.indieGameEvents.settings.touchJoystickAccuracy === 'standard' || !canvas.indieGameEvents.settings.touchJoystickAccuracy) {
             if (distance > data.parentPosition.width / 9) {
-                var angle = getAngle(data.midPoint, touchPoint);
+                angle = getAngle(data.midPoint, touchPoint);
 
                 if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
                     //console.log('right');
                     event = new CustomEvent('move-right');
                     event.strength = strength;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-left"] = false;
+                    canvas.indieGameEvents.eventStates["move-right"] = strength;
+
                 }
 
                 if (angle < 151.5 && angle > 22.5 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -1839,6 +2224,9 @@ var indieGameEvents = (function () {
                     event = new CustomEvent('move-down');
                     event.strength = strength;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-up"] = false;
+                    canvas.indieGameEvents.eventStates["move-down"] = strength;
                 }
 
                 if (((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -1846,6 +2234,9 @@ var indieGameEvents = (function () {
                     event = new CustomEvent('move-left');
                     event.strength = strength;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-right"] = false;
+                    canvas.indieGameEvents.eventStates["move-left"] = strength;
                 }
 
                 if (angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -1853,7 +2244,17 @@ var indieGameEvents = (function () {
                     event = new CustomEvent('move-up');
                     event.strength = strength;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-down"] = false;
+                    canvas.indieGameEvents.eventStates["move-up"] = strength;
                 }
+            }
+
+            else {
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
             }
         }
 
@@ -1873,6 +2274,9 @@ var indieGameEvents = (function () {
 
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-left"] = false;
+                    canvas.indieGameEvents.eventStates["move-right"] = event.strength;
                 }
 
                 if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -1886,6 +2290,9 @@ var indieGameEvents = (function () {
 
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-up"] = false;
+                    canvas.indieGameEvents.eventStates["move-down"] = event.strength;
                 }
 
                 if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -1897,6 +2304,9 @@ var indieGameEvents = (function () {
 
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-right"] = false;
+                    canvas.indieGameEvents.eventStates["move-left"] = event.strength;
                    // console.log(angle);
                 }
 
@@ -1911,7 +2321,17 @@ var indieGameEvents = (function () {
 
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
+
+                    canvas.indieGameEvents.eventStates["move-down"] = false;
+                    canvas.indieGameEvents.eventStates["move-up"] = event.strength;
                 }
+            }
+
+            else {
+                canvas.indieGameEvents.eventStates["move-left"] = false;
+                canvas.indieGameEvents.eventStates["move-right"] = false;
+                canvas.indieGameEvents.eventStates["move-up"] = false;
+                canvas.indieGameEvents.eventStates["move-down"] = false;
             }
         }
 
@@ -1991,13 +2411,33 @@ var indieGameEvents = (function () {
         var target = prepareTarget(e);
 
         if (!buttonField.eventDispatcherID) {
+
+            if (target.name) {
+                for (var key in buttonEvents[target.name]) {
+                    if (buttonEvents[target.name].hasOwnProperty(key)) {
+                        canvas.indieGameEvents.eventStates[buttonEvents[target.name][key]] = 100;
+                    }
+                }
+            }
+
             buttonField.eventDispatcherID = window.requestAnimationFrame(function () {
                 dispatchMoveButtonEvents(target, canvas, buttonEvents, buttonField)
             });           //only one touch counts
         }
     }
 
-    function buttonFieldTouchEndAction(e, buttonField) {
+    function buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents) {
+        var target = prepareTarget(e);
+
+        if (target.name) {
+            for (var key in buttonEvents[target.name]) {
+                if (buttonEvents[target.name].hasOwnProperty(key)) {
+                    canvas.indieGameEvents.eventStates[buttonEvents[target.name][key]] = false;
+                }
+            }
+        }
+
+
         window.cancelAnimationFrame(buttonField.eventDispatcherID);
         buttonField.eventDispatcherID = null;
     }
@@ -2071,6 +2511,23 @@ var indieGameEvents = (function () {
         return valNumber === 1;
     }
 
+
+    //This function is used to get the available events with the pressed down states (true for active, false for inactive)
+    function prepareEventStateArray () {
+        return {
+            "action-1" : false,
+            "action-2" : false,
+            "action-3" : false,
+            "action-4" : false,
+            "move-up" : false,
+            "move-left" : false,
+            "move-down" : false,
+            "move-right" : false,
+            "zoom" : false,
+            "rotate" : false,
+        }
+    }
+
     function countPropertiesInObject(obj) {
         var count = 0;
 
@@ -2116,8 +2573,7 @@ var indieGameEvents = (function () {
 
 
     /* rewrites the keyboard controller so you get rid of the delay @see (https://stackoverflow.com/questions/3691461/remove-key-press-delay-in-javascript)*/
-    // Keyboard input with customisable repeat (set to 0 for no key repeat)
-    function KeyboardController(keys) {
+    function KeyboardController(keys, eventStates, keyEventMap) {
         var timers, repeatAction;
 
         timers = {};
@@ -2135,11 +2591,13 @@ var indieGameEvents = (function () {
         };
 
         // Cancel timeout and mark key as released on keyup
-        //
         document.onkeyup = function (event) {
             var key = (event || window.event).keyCode;
             if (key in timers) {
                 if (timers[key] !== null) {
+                    if(keyEventMap[key] !== null) {
+                        eventStates[keyEventMap[key]] = false;
+                    }
                     cancelAnimationFrame(timers[key]);
                 }
                 timers[key] = null;
@@ -2151,12 +2609,17 @@ var indieGameEvents = (function () {
         // causing a key to 'get stuck down', cancel all held keys
         //
         window.onblur = function () {
-            for (var key in timers)
+            for (var key in timers) {
                 if (timers[key] !== null) {
+                    if(keyEventMap[key] !== null) {
+                        eventStates[keyEventMap[key]] = false;
+                    }
                     cancelAnimationFrame(timers[key]);
                     timers[key] = null;
-                    timers = {};
                 }
+            }
+
+            timers = {};
         };
 
         repeatAction = function (key, keys) {
@@ -2174,7 +2637,8 @@ var indieGameEvents = (function () {
         showTouchInterface: showIndieGameTouchInterface,
         hideTouchInterface: hideIndieGameTouchInterface,
         hideTouchInterfaceWithoutX: hideIndieGameTouchInterfaceWithoutX,
-        showTouchDismissButton: showTouchDismissButton
+        showTouchDismissButton: showTouchDismissButton,
+        getEventState: getEventState
     }
 
 

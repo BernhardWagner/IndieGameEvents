@@ -9,12 +9,11 @@ bw.test1 = (function () {
             ctx = canvas.getContext("2d");
         indieGameEvents.register(canvas,{
             events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump //zooming with keybaord + and - //keyboard rotate with numpad / * or i o
-            touchDirectionController: 'buttons',
+            touchDirectionController: 'joystick',
             touchJoystickAccuracy: 'smooth', //stength of the touch controller directions will get more accurate //smooth directions
             useWASDDirections: true,
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
-
 
 
         //bei zoom unt rotate event immer += verwenden für value
@@ -35,7 +34,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('move-right', function (e) {
            //console.log("right");
-           console.log(e);
+            //console.log(e.strength);
            x += e.strength/100;
         });
         canvas.addEventListener('move-up', function (e) {
@@ -103,8 +102,11 @@ bw.test1 = (function () {
 
             var i = 0;
 
+           if(indieGameEvents.getEventState(canvas, "move-up")) {
+               console.log("Yes");
+           }
+
             requestAnimationFrame(draw);
         }
-
     }
 })();
