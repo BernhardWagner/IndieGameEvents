@@ -2167,7 +2167,7 @@ var indieGameEvents = (function () {
         data.innerCircle.style.top = data.yPos + "px";
     }
 
-    function joystickReleaseAction(e) {
+    function joystickReleaseAction(e, canvas) {
         var data = getJoystickTouchData(e);
 
         data.innerCircle.style.transition = '0.2s ease';
@@ -2180,6 +2180,11 @@ var indieGameEvents = (function () {
 
         window.cancelAnimationFrame(data.innerCircle.eventDispatchID);
         data.innerCircle.eventDispatchID = null;
+
+        canvas.indieGameEvents.eventStates["move-left"] = false;
+        canvas.indieGameEvents.eventStates["move-right"] = false;
+        canvas.indieGameEvents.eventStates["move-up"] = false;
+        canvas.indieGameEvents.eventStates["move-down"] = false;
     }
 
     function getJoystickTouchData(e) {
@@ -2644,15 +2649,9 @@ var indieGameEvents = (function () {
 
 })();
 
-//TODO indieEvents settings sind zurzeit lokal, sollte es doch lieber global, sein...macht das sinn?
 //TODO Browser compatibilität testen (vielleicht gibt es tester online?)
-//TODO on controller or keyboard hide touch interface
-//TODO touch listen ansehen!!
 //TODO nicht css pointer events vergessen bei den wrappern
 //TODO hochformat und querformat bei touch interface beachten
-//TODO scrollen und drehen nicht vergessen
-//TODO swipe for movements?
-//TODO gyroscope doesent work right
 //TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
 //TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) und bei touch zweiten joystick generieren???
 //TODO add zoom buttons on touch interface
