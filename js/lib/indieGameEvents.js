@@ -3,7 +3,6 @@
 //TODO add external libraries
 
 //OWN LIBRARY
-//self invoking functions und closures erklären (JA)
 var indieGameEvents = (function () {
     /*GLOBALS*/
     //standard settings for the library
@@ -67,17 +66,24 @@ var indieGameEvents = (function () {
 
 
     function registerIndieGameEvents (element, settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
+        var indieGameEventsObject;
         //"this" is the canvasElement
 
         if(!(element instanceof HTMLCanvasElement)) {
             throw new TypeError("IndieGameEvents: You can only register HTML5 Canvas Elements");
         }
 
+        if(element.classList.contains("indie-game-events")) {
+            throw new Error("IndieGameEvents: Element is already registerd")
+        }
+
+        element.classList.add("indie-game-events");
+
         //creates an empty object for the library
-        element.indieGameEvents = {};
+        indieGameEventsObject = {};
 
         //sets the settings for the events (either standard settings or user settings when defined)
-        element.indieGameEvents.settings = {
+        indieGameEventsObject.settings = {
             events: settings.events || _standardSettings.events,                                                        //TODO: determine that inputs are correct
             physicalInputs: settings.physicalInputs || _standardSettings.physicalInputs,
             useWASDDirections: settings.useWASDDirections || _standardSettings.useWASDDirections,
@@ -93,143 +99,146 @@ var indieGameEvents = (function () {
 
         };
 
-        element.indieGameEvents.hammer = new _Hammer(element, {preventDefault: true}); //registers Hammer.js for the canvas
-        element.indieGameEvents.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
-        element.indieGameEvents.hammer.get('rotate').set({ enable: true }); // enable rotate
+        indieGameEventsObject.canvas = element;
 
-        element.indieGameEvents.eventStates = prepareEventStateArray();
+        indieGameEventsObject.hammer = new _Hammer(element, {preventDefault: true}); //registers Hammer.js for the canvas
+        indieGameEventsObject.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
+        indieGameEventsObject.hammer.get('rotate').set({ enable: true }); // enable rotate
 
-        window.addEventListener('keyup', function(e) {keyboardUpEvents(e, element)});
+        indieGameEventsObject.eventStates = prepareEventStateArray();
 
-        eventTranslator(element);                                                              //main function, translates the physical events to the right events
+        window.addEventListener('keyup', function(e) {keyboardUpEvents(e, indieGameEventsObject)});
 
-        return element.indieGameEvents; //the object where you can do something with //TODO should be there or not?
+        eventTranslator(element, indieGameEventsObject);                                                              //main function, translates the physical events to the right events
+
+        //returns the API object that represents an element
+        return indieGameEventsObject;
     }
 
-    function hideIndieGameTouchInterface(element) {
-        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
-            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
+    function hideIndieGameTouchInterface(indieGameEventsObject) {
+        if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
+            indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'none';
 
-            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
-                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
+                indieGameEventsObject.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     }
 
-    function showIndieGameTouchInterface (element) {
-        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
-            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'block';
+    function showIndieGameTouchInterface (indieGameEventsObject) {
+        if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
+            indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'block';
 
-            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
-                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
+                indieGameEventsObject.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     }
 
-    function hideIndieGameTouchInterfaceWithoutX (element) {
-        if (element && element.indieGameEvents && element.indieGameEvents.touchInterface && element.indieGameEvents.touchInterface.domElements && element.indieGameEvents.touchInterface.domElements.overlay) {
-            element.indieGameEvents.touchInterface.domElements.overlay.style.display = 'none';
+    function hideIndieGameTouchInterfaceWithoutX (indieGameEventsObject) {
+        if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
+            indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'none';
 
-            if (element.indieGameEvents.touchInterface.domElements.dismissButton) {
-                element.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+            if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
+                indieGameEventsObject.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     }
 
-    function showTouchDismissButton(canvas) {
-        if (canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
-            if (canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
-                canvas.indieGameEvents.touchInterface.domElements.dismissButton.display = 'block';
+    function showTouchDismissButton(indieGameEventsObject) {
+        if (indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
+            if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
+                indieGameEventsObject.touchInterface.domElements.dismissButton.display = 'block';
             }
         }
     }
 
-    function toggleTouchInterface(canvas) {
-        if(canvas && canvas.indieGameEvents && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.overlay) {
-            if(canvas.indieGameEvents.touchInterface.domElements.overlay.style.display === 'none'){
-                showIndieGameTouchInterface(canvas);
+    function toggleTouchInterface(indieGameEventsObject) {
+        if(indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
+            if(indieGameEventsObject.touchInterface.domElements.overlay.style.display === 'none'){
+                showIndieGameTouchInterface(indieGameEventsObject);
             } else {
-                hideIndieGameTouchInterface(canvas);
+                hideIndieGameTouchInterface(indieGameEventsObject);
             }
         }
     }
 
     //returns true (or the strenght or the zoom/scale factor) if an action is active (Button is pressed) can be used in an draw-Loop to poll event states, returns undifined if event is not recognized
     //and false on inactive event states
-    function getEventState(canvas, event) {
-        if(canvas && canvas.indieGameEvents) {
-            return canvas.indieGameEvents.eventStates[event];
+    function getEventState(indieGameEventsObject, event) {
+        if(indieGameEventsObject) {
+            return indieGameEventsObject.eventStates[event];
         } else {
-            throw new TypeError("Given Value must be from type canvas and has be registered for the indieGameEvents");
+            throw new TypeError("Given Value must be from type canvas and has be registered for the indieGameEventsObject");
         }
     }
 
 
     /*MAIN*/
-    function eventTranslator(canvas) {
-        var events = canvas.indieGameEvents.settings.events,
-            physicalInput = canvas.indieGameEvents.settings.physicalInputs,
+    function eventTranslator(canvas, indieGameEventsObject) {
+        var events = indieGameEventsObject.settings.events,
+            physicalInput = indieGameEventsObject.settings.physicalInputs,
             boundingRect = canvas.getBoundingClientRect();
 
-        canvas.indieGameEvents.oldBoundingRect = boundingRect;
+        indieGameEventsObject.oldBoundingRect = boundingRect;
 
 
         /*directions*/
         if (events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
-            registerMoveUp(canvas);
-            registerMoveDown(canvas);
-            registerMoveLeft(canvas);
-            registerMoveRight(canvas);
+            registerMoveUp(indieGameEventsObject);
+            registerMoveDown(indieGameEventsObject);
+            registerMoveLeft(indieGameEventsObject);
+            registerMoveRight(indieGameEventsObject);
         }
 
         else {
             if (events.indexOf('move-up') !== -1) {
-                registerMoveUp(canvas);
+                registerMoveUp(indieGameEventsObject);
             }
 
             if (events.indexOf('move-down') !== -1) {
-                registerMoveDown(canvas);
+                registerMoveDown(indieGameEventsObject);
             }
 
             if (events.indexOf('move-left') !== -1) {
-                registerMoveLeft(canvas);
+                registerMoveLeft(indieGameEventsObject);
             }
 
             if (events.indexOf('move-right') !== -1) {
-                registerMoveRight(canvas);
+                registerMoveRight(indieGameEventsObject);
             }
         }
 
         if(events.indexOf('zoom') !== -1) {
-            registerZoom(canvas, boundingRect);
+            registerZoom(canvas, boundingRect, indieGameEventsObject);
         }
 
         if(events.indexOf('rotate') !== -1) {
-            registerRotate(canvas, boundingRect);
+            registerRotate(canvas, boundingRect, indieGameEventsObject);
         }
 
 
         //Gamepads
         if((_gamepadAPI || _webkitGamepadAPI) && (physicalInput.indexOf('controller') !== -1 || physicalInput.indexOf('gamepad') !== -1)) {
-            canvas.indieGameEvents.gamepad = {};
+            indieGameEventsObject.gamepad = {};
 
-            registerConnectionGamepadEvents(canvas);
+            registerConnectionGamepadEvents(indieGameEventsObject);
 
             //if there is already a gamepad in use
             if(isGamepadConnected()) {
-                getConnectedGamepadsAndPoll(canvas);
+                getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
             }
         }
 
 
         //keyboard
         if(physicalInput.indexOf('keyboard') !== -1) {
-            registerKeyboardEvents(canvas, events, canvas.indieGameEvents.settings);
+            registerKeyboardEvents(canvas, events, indieGameEventsObject);
         }
 
         //if gyroscope mode is enabled
-        if (canvas.indieGameEvents.settings.useGyroscope === true && isTouchDevice()) {
-            registerGyroscope(canvas);
+        if (indieGameEventsObject.settings.useGyroscope === true && isTouchDevice()) {
+            registerGyroscope(canvas, indieGameEventsObject);
             //https://github.com/tomgco/gyro.js
             //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders deswegen gyronorm.js)
         }
@@ -237,17 +246,17 @@ var indieGameEvents = (function () {
         /* touch */
         /*create an interface for touch devices when the device has an touch input and no controller is connected*/
         if (!isGamepadConnected() && (physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
-            createTouchInterface(canvas, boundingRect);
+            createTouchInterface(canvas, boundingRect, indieGameEventsObject);
 
             //when it fullscreen is activated
-            document.addEventListener("fullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
-            document.addEventListener("webkitfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
-            document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
-            document.addEventListener("MSFullscreenChange", function() {touchInterfaceFullscreenHandler(canvas.indieGameEvents.touchInterface.domElements, canvas)});
+            document.addEventListener("fullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
+            document.addEventListener("webkitfullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
+            document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
+            document.addEventListener("MSFullscreenChange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
 
             //handle resize of canvas for the touch overlay
-            window.addEventListener("resize", function () {handleResize(canvas, canvas.indieGameEvents.touchInterface)});
-            window.addEventListener("orientationchange", function () {handleResize(canvas, canvas.indieGameEvents.touchInterface)});
+            window.addEventListener("resize", function () {handleResize(canvas, indieGameEventsObject.touchInterface)});
+            window.addEventListener("orientationchange", function () {handleResize(canvas, indieGameEventsObject.touchInterface)});
 
         }
 
@@ -255,19 +264,19 @@ var indieGameEvents = (function () {
         //handle window rezise event
         function handleResize(canvas, touchInterface) {
             var newBoundingRect = canvas.getBoundingClientRect(),
-                oldBoundingRect = canvas.indieGameEvents.oldBoundingRect,
+                oldBoundingRect = indieGameEventsObject.oldBoundingRect,
                 visibleJoystick,
                 visibleDirectionButtons;
 
             if(newBoundingRect.width !== oldBoundingRect.width || newBoundingRect.height !== oldBoundingRect.height) {
                 //hide joystick at the beginning until the gyroscope is loaded
-                if(canvas.indieGameEvents.touchInterface) {
-                    if(canvas.indieGameEvents.touchInterface.domElements.joystick) {
-                        (canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display !== 'none') ? visibleJoystick = true : visibleJoystick = false;
+                if(indieGameEventsObject.touchInterface) {
+                    if(indieGameEventsObject.touchInterface.domElements.joystick) {
+                        (indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display !== 'none') ? visibleJoystick = true : visibleJoystick = false;
                     }
 
-                    else if(canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
-                        (canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display !== 'none') ? visibleDirectionButtons = true : visibleDirectionButtons = false;
+                    else if(indieGameEventsObject.touchInterface.domElements.directionButtons) {
+                        (indieGameEventsObject.touchInterface.domElements.directionButtons.wrapper.style.display !== 'none') ? visibleDirectionButtons = true : visibleDirectionButtons = false;
                     }
                 }
 
@@ -276,19 +285,19 @@ var indieGameEvents = (function () {
                 delete canvas.touchInterface;
                 touchInterface = null;
                 //create new touch interface
-                createTouchInterface(canvas, newBoundingRect);
+                createTouchInterface(canvas, newBoundingRect, indieGameEventsObject);
 
-                visibleJoystick ? canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = "block" : '';
-                visibleDirectionButtons ? canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = "block" : '';
+                visibleJoystick ? indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = "block" : '';
+                visibleDirectionButtons ? indieGameEventsObject.touchInterface.domElements.directionButtons.wrapper.style.display = "block" : '';
 
-                canvas.indieGameEvents.oldBoundingRect = newBoundingRect;
+                indieGameEventsObject.oldBoundingRect = newBoundingRect;
             }
         }
 
 
         //mouse events
         if(physicalInput.indexOf('mouse') !== -1) {
-            registerMouseEvents(canvas, events, canvas.indieGameEvents.settings);
+            registerMouseEvents(canvas, events, indieGameEventsObject.settings, indieGameEventsObject);
         }
 
 
@@ -298,7 +307,7 @@ var indieGameEvents = (function () {
     
     
     //MOUSE
-    function registerMouseEvents(canvas, events, settings) {
+    function registerMouseEvents(canvas, events, settings, indieGameEventsObject) {
         var oldClientX = 0, clickPosition, data, eventDispatchID, point;
 
         point = document.createElement("div");
@@ -343,10 +352,10 @@ var indieGameEvents = (function () {
                 removePoint();
                 window.removeEventListener('mousemove', moveMove, true);
 
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-right"] = false;
             }
 
             canvas.style.cursor = "default";
@@ -427,8 +436,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-left"] = false;
-                    canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+                    indieGameEventsObject.eventStates["move-left"] = false;
+                    indieGameEventsObject.eventStates["move-right"] = event.strength;
                 }
 
                 if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -443,8 +452,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-up"] = false;
-                    canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+                    indieGameEventsObject.eventStates["move-up"] = false;
+                    indieGameEventsObject.eventStates["move-down"] = event.strength;
                 }
 
                 if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -457,8 +466,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-right"] = false;
-                    canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                    indieGameEventsObject.eventStates["move-right"] = false;
+                    indieGameEventsObject.eventStates["move-left"] = event.strength;
                     // console.log(angle);
                 }
 
@@ -474,16 +483,16 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-down"] = false;
-                    canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                    indieGameEventsObject.eventStates["move-down"] = false;
+                    indieGameEventsObject.eventStates["move-up"] = event.strength;
                 }
             }
 
             else {
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = false;
             }
 
             eventDispatchID = window.requestAnimationFrame(function() {moveLoop(distance, strength, angle)});
@@ -553,14 +562,14 @@ var indieGameEvents = (function () {
 
 
     /*KEYBOARD*/
-    function registerKeyboardEvents(canvas, events, settings) {
+    function registerKeyboardEvents(canvas, events, indieGameEventsObject) {
         var event, keyBoardEvents, keyMapping, keyEventMap;
 
         keyBoardEvents = {};
         keyMapping = {};
         keyEventMap = {};
 
-        if (canvas.indieGameEvents.settings.useWASDDirections) {
+        if (indieGameEventsObject.settings.useWASDDirections) {
             keyMapping.left = 65;
             keyMapping.right = 68;
             keyMapping.down = 83;
@@ -573,7 +582,7 @@ var indieGameEvents = (function () {
         }
 
         //action keys
-        if(settings.useSpaceStrgAltShiftActions) {
+        if(indieGameEventsObject.settings.useSpaceStrgAltShiftActions) {
             keyMapping.action1Space = 32;
             keyMapping.action2Strg = 17;
             keyMapping.action3Alt = 18;
@@ -646,7 +655,7 @@ var indieGameEvents = (function () {
                 event.strength = 100;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['move-left'] = 100;
+                indieGameEventsObject.eventStates['move-left'] = 100;
             }
         }
 
@@ -656,7 +665,7 @@ var indieGameEvents = (function () {
                 event.strength = 100;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['move-right'] = 100;
+                indieGameEventsObject.eventStates['move-right'] = 100;
             }
         }
 
@@ -666,7 +675,7 @@ var indieGameEvents = (function () {
                 event.strength = 100;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['move-up'] = 100;
+                indieGameEventsObject.eventStates['move-up'] = 100;
             }
         }
 
@@ -676,7 +685,7 @@ var indieGameEvents = (function () {
                 event.strength = 100;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['move-down'] = 100;
+                indieGameEventsObject.eventStates['move-down'] = 100;
             }
         }
 
@@ -685,7 +694,7 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('action-1');
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['action-1'] = true;
+                indieGameEventsObject.eventStates['action-1'] = true;
             }
         }
 
@@ -694,7 +703,7 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('action-2');
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['action-2'] = true;
+                indieGameEventsObject.eventStates['action-2'] = true;
             }
         }
 
@@ -703,7 +712,7 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('action-3');
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['action-3'] = true;
+                indieGameEventsObject.eventStates['action-3'] = true;
             }
         }
 
@@ -712,7 +721,7 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('action-4');
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['action-4'] = true;
+                indieGameEventsObject.eventStates['action-4'] = true;
             }
         }
 
@@ -723,7 +732,7 @@ var indieGameEvents = (function () {
                 event.scale = 0.1;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['zoom'] = 0.1;
+                indieGameEventsObject.eventStates['zoom'] = 0.1;
 
             };
 
@@ -732,7 +741,7 @@ var indieGameEvents = (function () {
                 event.scale = -0.1;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['zoom'] = -0.1;
+                indieGameEventsObject.eventStates['zoom'] = -0.1;
             }
         }
 
@@ -743,7 +752,7 @@ var indieGameEvents = (function () {
                 event.rotation = 0.1;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['rotate'] = 0.1;
+                indieGameEventsObject.eventStates['rotate'] = 0.1;
             };
 
             keyBoardEvents[keyMapping.rotateLeftNP] = keyBoardEvents[keyMapping.rotateLeftL] = function () {
@@ -751,7 +760,7 @@ var indieGameEvents = (function () {
                 event.rotation = -0.1;
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates['rotate'] = -0.1;
+                indieGameEventsObject.eventStates['rotate'] = -0.1;
             }
         }
 
@@ -763,9 +772,9 @@ var indieGameEvents = (function () {
                 canvas.dispatchEvent(event);
 
                 //hide touch menu button and touch map button if they are there
-                hideTouchMenuButton();
-                hideTouchMapButton();
-                showTouchDismissButton();
+                hideTouchMenuButton(indieGameEventsObject);
+                hideTouchMapButton(indieGameEventsObject);
+                showTouchDismissButton(indieGameEventsObject);
             }
         }
 
@@ -775,8 +784,8 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('open-map');
                 canvas.dispatchEvent(event);
 
-                hideTouchMapButton();
-                showTouchDismissButton();
+                hideTouchMapButton(indieGameEventsObject);
+                showTouchDismissButton(indieGameEventsObject);
             }
         }
 
@@ -786,9 +795,9 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('dismiss');
                 canvas.dispatchEvent(event);
 
-                showTouchMapButton();
-                showTouchMenuButton();
-                hideTouchDismissButton();
+                showTouchMapButton(indieGameEventsObject);
+                showTouchMenuButton(indieGameEventsObject);
+                hideTouchDismissButton(indieGameEventsObject);
             }
         }
 
@@ -798,19 +807,19 @@ var indieGameEvents = (function () {
 
 
 
-        KeyboardController(keyBoardEvents, canvas.indieGameEvents.eventStates, keyEventMap);
+        KeyboardController(keyBoardEvents, indieGameEventsObject.eventStates, keyEventMap);
     }
 
-    function keyboardUpEvents(e, canvas) {
+    function keyboardUpEvents(e, indieGameEventsObject) {
         switch (e.keyCode) {
             case 118:
-                toggleTouchInterface(canvas);
+                toggleTouchInterface(indieGameEventsObject);
                 break;
         }
     }
 
     /*GAMEPAD */
-    function getConnectedGamepadsAndPoll(canvas) {
+    function getConnectedGamepadsAndPoll(canvas, indieGameEventsObject) {
         var gamepadKey, gamepad;
 
         _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
@@ -827,7 +836,7 @@ var indieGameEvents = (function () {
         //only poll gamepad events when they are available
         if(isGamepadConnected() && !_gamepadPolling){
            _gamepadPolling = true;
-           pollGamepadEvents(canvas);
+           pollGamepadEvents(canvas, indieGameEventsObject);
         }
         else if(!isGamepadConnected() && _gamepadPolling) {
             _gamepadPolling = false;
@@ -835,34 +844,41 @@ var indieGameEvents = (function () {
     }
 
     //https://github.com/luser/gamepadtest/blob/master/gamepadtest.js
-    function registerConnectionGamepadEvents(canvas) {
+    function registerConnectionGamepadEvents(indieGameEventsObject) {
+        var canvas = indieGameEventsObject.canvas;
+
         if (_gamepadAPI) {
-            window.addEventListener("gamepadconnected", function() {gamepadConnectHandler(canvas)});
-            window.addEventListener("gamepaddisconnected", function() {gamepadConnectHandler(canvas)});
+            window.addEventListener("gamepadconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
+            window.addEventListener("gamepaddisconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
         } else if (_webkitGamepadAPI) {
-            window.addEventListener("webkitgamepadconnected", function() {gamepadConnectHandler(canvas)});
-            window.addEventListener("webkitgamepaddisconnected", function() {gamepadConnectHandler(canvas)});
+            window.addEventListener("webkitgamepadconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
+            window.addEventListener("webkitgamepaddisconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
         } else {
             setInterval(function () {
-                getConnectedGamepadsAndPoll(canvas);
+                getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
             }, 500);
         }
     }
     
-    function gamepadConnectHandler(canvas) {
-        getConnectedGamepadsAndPoll(canvas);
+    function gamepadConnectHandler(canvas, indieGameEventsObject) {
+        getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
     }
     
-    function pollGamepadEvents(canvas) {
-        var gamepadKey, gamepad, i, button, pressed, strength, events;
+    function pollGamepadEvents(canvas, indieGameEventsObject) {
+        var gamepadKey, gamepad, i, button, pressed, strength, events, leftRightTriggered, upDownTriggered, action1Triggered, action2Triggered, action3Triggered ,action4Triggered;
 
-        events = canvas.indieGameEvents.settings.events;
+        events = indieGameEventsObject.settings.events;
 
         if(_gamepadPolling) {
             _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
             for(gamepadKey in _gamepads) {
                 if(_gamepads.hasOwnProperty(gamepadKey)){
                     gamepad = _gamepads[gamepadKey];
+
+                    action1Triggered = false;
+                    action2Triggered = false;
+                    action3Triggered = false;
+                    action4Triggered = false;
 
                     if(gamepad && typeof(gamepad) === 'object') {
                         for (i = 0; i < gamepad.buttons.length; i++) {
@@ -879,42 +895,89 @@ var indieGameEvents = (function () {
 
                             //standard key mapping...we are good to go (@see https://w3c.github.io/gamepad/#remapping)
                             if(pressed && gamepad.mapping === 'standard'){
-                                standardGamepadButtonActions(i, canvas, events);
+                                standardGamepadButtonActions(i, canvas, events, indieGameEventsObject);
+
+                                if(i === 0) {action1Triggered = true;}
+                                else if(i === 2) {action2Triggered = true;}
+                                else if(i === 1) {action3Triggered = true;}
+                                else if(i === 3) {action4Triggered = true;}
+
                             } else if (pressed) {                                 //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
-                                nonStandardGamepadButtonActions(i, canvas, events);
+                                nonStandardGamepadButtonActions(i, canvas, events, indieGameEventsObject);
+
+                                if(i === 0) {action1Triggered = true;}
+                                else if(i === 1) {action2Triggered = true;}
+                                else if(i === 2) {action3Triggered = true;}
+                                else if(i === 3) {action4Triggered = true;}
                             }
                         }
 
                         if(gamepad.axes){
                             if (gamepad.mapping === 'standard') {
                                 for (i = 0; i < gamepad.axes.length; i++) {
+                                    leftRightTriggered = true;
+                                    upDownTriggered = true;
+
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
-                                        standardGamepadAxisActions(i, canvas, events, gamepad.axes[i]);
+                                        standardGamepadAxisActions(i, canvas, events, gamepad.axes[i], indieGameEventsObject);
+                                    } else if(i === 0) {
+                                        leftRightTriggered = false;
+                                    } else if(i=== 1) {
+                                        upDownTriggered = false;
                                     }
                                 }
                             } else { //not standard key mapping
                                 for (i = 0; i < gamepad.axes.length; i++) {
+                                    leftRightTriggered = true;
+                                    upDownTriggered = true;
+
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
-                                        //TODO map to non standard Thrustmaster Dual Analog 4
-                                        nonStandardGamepadAxisActions(i, canvas, events, gamepad.axes[i]);
+                                        //map to non standard Thrustmaster Dual Analog 4
+                                        nonStandardGamepadAxisActions(i, canvas, events, gamepad.axes[i], indieGameEventsObject);
+                                    } else if(i === 0 || i === 5 || i === 2) {
+                                        leftRightTriggered = false;
+                                    } else if(i=== 1 || i === 3 || i === 6) {
+                                        upDownTriggered = false;
                                     }
                                 }
+                            }
+
+                            if(!leftRightTriggered) {
+                                indieGameEventsObject.eventStates["move-right"] = false;
+                                indieGameEventsObject.eventStates["move-left"] = false;
+                            }
+
+                            if(!upDownTriggered) {
+                                indieGameEventsObject.eventStates["move-down"] = false;
+                                indieGameEventsObject.eventStates["move-up"] = false;
+                            }
+                            if(!action1Triggered) {
+                                indieGameEventsObject.eventStates["action-1"] = false;
+                            }
+                            if(!action2Triggered) {
+                                indieGameEventsObject.eventStates["action-2"] = false;
+                            }
+                            if(!action3Triggered) {
+                                indieGameEventsObject.eventStates["action-3"] = false;
+                            }
+                            if(!action4Triggered) {
+                                indieGameEventsObject.eventStates["action-4"] = false;
                             }
                         }
                     }
                 }
             }
 
-            canvas.indieGameEvents.gamepad.pollingID = window.requestAnimationFrame(function () { pollGamepadEvents(canvas) });
+            indieGameEventsObject.gamepad.pollingID = window.requestAnimationFrame(function () { pollGamepadEvents(canvas, indieGameEventsObject) });
         }
         else {
-            window.cancelAnimationFrame(canvas.indieGameEvents.gamepad.pollingID);
+            window.cancelAnimationFrame(indieGameEventsObject.gamepad.pollingID);
         }
 
     }
 
 
-    function nonStandardGamepadAxisActions(i, canvas, events, gamepadAxes) {
+    function nonStandardGamepadAxisActions(i, canvas, events, gamepadAxes, indieGameEventsObject) {
         var event;
 
         //knob one
@@ -924,19 +987,16 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-left"] = event.strength;
 
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = event.strength;
             }
         }
 
@@ -946,18 +1006,15 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                indieGameEventsObject.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = event.strength;
             }
         }
 
@@ -969,19 +1026,16 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-left"] = event.strength;
 
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = event.strength;
             }
         }
 
@@ -991,19 +1045,16 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                indieGameEventsObject.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = event.strength;
 
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = event.strength;
             }
         }
 
@@ -1014,19 +1065,16 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-left"] = event.strength;
 
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = event.strength;
             }
         }
 
@@ -1036,19 +1084,16 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                indieGameEventsObject.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = event.strength;
 
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = event.strength;
             }
         }
 
@@ -1057,7 +1102,7 @@ var indieGameEvents = (function () {
 
     }
 
-    function standardGamepadAxisActions(i, canvas, events, gamepadAxes) {
+    function standardGamepadAxisActions(i, canvas, events, gamepadAxes, indieGameEventsObject) {
         var event;
 
         //knob one
@@ -1067,18 +1112,15 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-left"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-right');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = event.strength;
             }
         }
 
@@ -1088,57 +1130,46 @@ var indieGameEvents = (function () {
                 event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-down"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                indieGameEventsObject.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = event.strength;
             } else if(gamepadAxes > 0.1) {
                 event = new CustomEvent('move-down');
                 event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
                 canvas.dispatchEvent(event);
 
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = event.strength;
-            } else {
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = event.strength;
             }
         }
 
     }
 
-    function nonStandardGamepadButtonActions(i, canvas, events) {
+    function nonStandardGamepadButtonActions(i, canvas, events, indieGameEventsObject) {
         var event;
 
         // console.log('nonstandard ' + (i + 1));
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-1"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-1"] = false;
+            indieGameEventsObject.eventStates["action-1"] = true;
         }
 
         if (events.indexOf('action-2') !== -1 && i === 1) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-2"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-2"] = false;
+            indieGameEventsObject.eventStates["action-2"] = true;
         }
 
         if (events.indexOf('action-3') !== -1 && i === 2) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-3"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-3"] = false;
+            indieGameEventsObject.eventStates["action-3"] = true;
         }
 
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-4"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-4"] = false;
+            indieGameEventsObject.eventStates["action-4"] = true;
         }
 
 
@@ -1148,9 +1179,9 @@ var indieGameEvents = (function () {
             event = new CustomEvent('dismiss');
             canvas.dispatchEvent(event);
 
-            showTouchMapButton();
-            showTouchMenuButton();
-            hideTouchDismissButton();
+            showTouchMapButton(indieGameEventsObject);
+            showTouchMenuButton(indieGameEventsObject);
+            hideTouchDismissButton(indieGameEventsObject);
         }
 
         if(events.indexOf('open-menu') !== -1 && i === 9) {
@@ -1158,17 +1189,17 @@ var indieGameEvents = (function () {
             canvas.dispatchEvent(event);
 
             //hide touch menu button and touch map button if they are there
-            hideTouchMenuButton();
-            hideTouchMapButton();
-            showTouchDismissButton();
+            hideTouchMenuButton(indieGameEventsObject);
+            hideTouchMapButton(indieGameEventsObject);
+            showTouchDismissButton(indieGameEventsObject);
         }
 
         if(events.indexOf('open-map') !== -1 && i === 5) {
             event = new CustomEvent('open-map');
             canvas.dispatchEvent(event);
 
-            hideTouchMapButton();
-            showTouchDismissButton();
+            hideTouchMapButton(indieGameEventsObject);
+            showTouchDismissButton(indieGameEventsObject);
         }
 
 
@@ -1198,40 +1229,32 @@ var indieGameEvents = (function () {
         }
     }
 
-    function standardGamepadButtonActions(i, canvas, events) {
+    function standardGamepadButtonActions(i, canvas, events, indieGameEventsObject) {
         var event;
 
         // console.log('nonstandard ' + (i + 1));
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-1"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-1"] = false;
+            indieGameEventsObject.eventStates["action-1"] = true;
         }
 
         if (events.indexOf('action-2') !== -1 && i === 2) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-2"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-2"] = false;
+            indieGameEventsObject.eventStates["action-2"] = true;
         }
 
         if (events.indexOf('action-3') !== -1 && i === 1) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-3"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-3"] = false;
+            indieGameEventsObject.eventStates["action-3"] = true;
         }
 
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
-            canvas.indieGameEvents.eventStates["action-4"] = true;
-        } else {
-            canvas.indieGameEvents.eventStates["action-4"] = false;
+            indieGameEventsObject.eventStates["action-4"] = true;
         }
 
 
@@ -1241,9 +1264,9 @@ var indieGameEvents = (function () {
             event = new CustomEvent('dismiss');
             canvas.dispatchEvent(event);
 
-            showTouchMapButton();
-            showTouchMenuButton();
-            hideTouchDismissButton();
+            showTouchMapButton(indieGameEventsObject);
+            showTouchMenuButton(indieGameEventsObject);
+            hideTouchDismissButton(indieGameEventsObject);
         }
 
         if(events.indexOf('open-menu') !== -1 && i === 9) {
@@ -1251,17 +1274,17 @@ var indieGameEvents = (function () {
             canvas.dispatchEvent(event);
 
             //hide touch menu button and touch map button if they are there
-            hideTouchMenuButton();
-            hideTouchMapButton();
-            showTouchDismissButton();
+            hideTouchMenuButton(indieGameEventsObject);
+            hideTouchMapButton(indieGameEventsObject);
+            showTouchDismissButton(indieGameEventsObject);
         }
 
         if(events.indexOf('open-map') !== -1 && i === 14) {
             event = new CustomEvent('open-map');
             canvas.dispatchEvent(event);
 
-            hideTouchMapButton();
-            showTouchDismissButton();
+            hideTouchMapButton(indieGameEventsObject);
+            showTouchDismissButton(indieGameEventsObject);
         }
 
 
@@ -1292,29 +1315,29 @@ var indieGameEvents = (function () {
     }
 
     /*FOR THE DIRECTIONS*/
-    function registerMoveUp(canvas) {
-        canvas.indieGameEvents.directions = true;               //when at least one direction event is true the directions are set to true
+    function registerMoveUp(indieGameEventsObject) {
+        indieGameEventsObject.directions = true;               //when at least one direction event is true the directions are set to true
     }
 
-    function registerMoveDown(canvas) {
-        canvas.indieGameEvents.directions = true;
-
-    }
-
-    function registerMoveLeft(canvas) {
-        canvas.indieGameEvents.directions = true;
+    function registerMoveDown(indieGameEventsObject) {
+        indieGameEventsObject.directions = true;
 
     }
 
-    function registerMoveRight(canvas) {
-        canvas.indieGameEvents.directions = true;
+    function registerMoveLeft(indieGameEventsObject) {
+        indieGameEventsObject.directions = true;
+
+    }
+
+    function registerMoveRight(indieGameEventsObject) {
+        indieGameEventsObject.directions = true;
 
     }
 
 
     /* ZOOMING */
-    function registerZoom(canvas, boundingRect) {
-        var hammer = canvas.indieGameEvents.hammer,
+    function registerZoom(canvas, boundingRect, indieGameEventsObject) {
+        var hammer = indieGameEventsObject.hammer,
             event,
             lastScale;
 
@@ -1326,7 +1349,7 @@ var indieGameEvents = (function () {
         });
 
         hammer.on('pinchmove', function (e) {
-                event.scale = e.scale - lastScale;                                                          //relative scale value (positive on zoom in and negative on zoom out)
+                event.scale = (e.scale - lastScale);                                                          //relative scale value (positive on zoom in and negative on zoom out)
                 lastScale = e.scale;
                 event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
                 canvas.dispatchEvent(event);
@@ -1339,8 +1362,8 @@ var indieGameEvents = (function () {
     }
 
     /* ROTATION */
-    function registerRotate(canvas, boundingRect) {
-        var hammer = canvas.indieGameEvents.hammer,
+    function registerRotate(canvas, boundingRect, indieGameEventsObject) {
+        var hammer = indieGameEventsObject.hammer,
             event,
             lastRotation;
 
@@ -1352,7 +1375,7 @@ var indieGameEvents = (function () {
         });
 
         hammer.on('rotatemove', function (e) {
-            event.rotation = e.rotation - lastRotation;               //relative rotation value
+            event.rotation = (e.rotation - lastRotation);               //relative rotation value
             lastRotation = e.rotation;
             canvas.dispatchEvent(event);
         });
@@ -1360,7 +1383,7 @@ var indieGameEvents = (function () {
 
 
     /*GYROSCOPE*/
-    function registerGyroscope(canvas) {
+    function registerGyroscope(canvas, indieGameEventsObject) {
         var joystickHidden = true, buttonsHidden = true; //joysticks are hidden on standard and showed when device orientation and rotation rate is not supported
 
         _gn.init(_gyroSettings).then(function() {
@@ -1368,30 +1391,30 @@ var indieGameEvents = (function () {
                 var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation && canvas.indieGameEvents.touchInterface) {
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation && indieGameEventsObject.touchInterface) {
                     //if the joystick is available hide it, we dont neeed it on gyroMode
-                    if(!joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
-                        canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'none';
+                    if(!joystickHidden && indieGameEventsObject.touchInterface.domElements.joystick) {
+                        indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = 'none';
                         joystickHidden = true;
                     }
 
                     //same for direction buttons
-                    else if(!buttonsHidden && canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
-                        canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = 'none';
+                    else if(!buttonsHidden && indieGameEventsObject.touchInterface.domElements.directionButtons) {
+                        indieGameEventsObject.touchInterface.domElements.directionButtons.wrapper.style.display = 'none';
                         buttonsHidden = true;
                     }
 
-                   translateGyroscopeValues(data, canvas, orientation);
+                   translateGyroscopeValues(data, canvas, orientation, indieGameEventsObject);
 
-                } else if (canvas.indieGameEvents.touchInterface){
-                    if(joystickHidden && canvas.indieGameEvents.touchInterface.domElements.joystick) {
-                        canvas.indieGameEvents.touchInterface.domElements.joystick.wrapper.style.display = 'block';
+                } else if (indieGameEventsObject.touchInterface){
+                    if(joystickHidden && indieGameEventsObject.touchInterface.domElements.joystick) {
+                        indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = 'block';
                         joystickHidden = false;
                     }
 
                     //same for direction buttons
-                    else if(buttonsHidden && canvas.indieGameEvents.touchInterface.domElements.directionButtons) {
-                        canvas.indieGameEvents.touchInterface.domElements.directionButtons.wrapper.style.display = 'block';
+                    else if(buttonsHidden && indieGameEventsObject.touchInterface.domElements.directionButtons) {
+                        indieGameEventsObject.touchInterface.domElements.directionButtons.wrapper.style.display = 'block';
                         buttonsHidden = false;
                     }
                     _gn.end(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons or joystick)
@@ -1403,7 +1426,7 @@ var indieGameEvents = (function () {
     }
 
 
-    function translateGyroscopeValues(data, canvas, orientation) {
+    function translateGyroscopeValues(data, canvas, orientation, indieGameEventsObject) {
         var alpha, beta, gamma, event;
 
         //calibrate gyroscope to get the standard position of the device
@@ -1433,8 +1456,8 @@ var indieGameEvents = (function () {
             }
             canvas.dispatchEvent(event);
 
-            canvas.indieGameEvents.eventStates['move-right'] = false;
-            canvas.indieGameEvents.eventStates['move-left'] = event.strength;
+            indieGameEventsObject.eventStates['move-right'] = false;
+            indieGameEventsObject.eventStates['move-left'] = event.strength;
         }
         else if (gamma > 10 && gamma < 90) {
             event = new CustomEvent('move-right');
@@ -1447,8 +1470,8 @@ var indieGameEvents = (function () {
 
             canvas.dispatchEvent(event);
 
-            canvas.indieGameEvents.eventStates['move-left'] = false;
-            canvas.indieGameEvents.eventStates['move-right'] = event.strength;
+            indieGameEventsObject.eventStates['move-left'] = false;
+            indieGameEventsObject.eventStates['move-right'] = event.strength;
         }
 
         if (beta < -10 && beta > -90) {
@@ -1464,8 +1487,8 @@ var indieGameEvents = (function () {
 
             canvas.dispatchEvent(event);
 
-            canvas.indieGameEvents.eventStates['move-down'] = false;
-            canvas.indieGameEvents.eventStates['move-up'] = event.strength;
+            indieGameEventsObject.eventStates['move-down'] = false;
+            indieGameEventsObject.eventStates['move-up'] = event.strength;
         }
         else if (beta > 10 && beta < 90) {
             event = new CustomEvent('move-down');
@@ -1480,30 +1503,30 @@ var indieGameEvents = (function () {
 
             canvas.dispatchEvent(event);
 
-            canvas.indieGameEvents.eventStates['move-up'] = false;
-            canvas.indieGameEvents.eventStates['move-down'] = event.strength;
+            indieGameEventsObject.eventStates['move-up'] = false;
+            indieGameEventsObject.eventStates['move-down'] = event.strength;
         }
 
         else {
-            canvas.indieGameEvents.eventStates['move-up'] = false;
-            canvas.indieGameEvents.eventStates['move-down'] = false;
-            canvas.indieGameEvents.eventStates['move-left'] = false;
-            canvas.indieGameEvents.eventStates['move-right'] = false;
+            indieGameEventsObject.eventStates['move-up'] = false;
+            indieGameEventsObject.eventStates['move-down'] = false;
+            indieGameEventsObject.eventStates['move-left'] = false;
+            indieGameEventsObject.eventStates['move-right'] = false;
         }
 
     }
 
 
     /*THE TOUCH INTERFACE*/
-    function createTouchInterface(canvas, boundingRect) {                                                                 //Touch interface will be overlaid over the canvas
+    function createTouchInterface(canvas, boundingRect, indieGameEventsObject) {                                                                 //Touch interface will be overlaid over the canvas
         var smallestJoystickValue = 100,    //min and max values so the touchpad isnt to big or small
             highestJoystickValue = 350,
             overlayRectSize = boundingRect,                                                //gets the correct overlayRect position and size;
-            events = canvas.indieGameEvents.settings.events;
+            events = indieGameEventsObject.settings.events;
 
         /*object for the touch interface*/
-        canvas.indieGameEvents.touchInterface = {};
-        var dom = canvas.indieGameEvents.touchInterface.domElements = {};
+        indieGameEventsObject.touchInterface = {};
+        var dom = indieGameEventsObject.touchInterface.domElements = {};
 
         dom.overlay = document.createElement('div');
         dom.overlay.className += 'touchInterface';
@@ -1511,7 +1534,7 @@ var indieGameEvents = (function () {
         setTouchOverlayStyle(overlayRectSize, dom);                                                          //to position the overlay
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
-        if (canvas.indieGameEvents.settings.touchDirectionController === 'joystick' && canvas.indieGameEvents.directions) {
+        if (indieGameEventsObject.settings.touchDirectionController === 'joystick' && indieGameEventsObject.directions) {
             var joystickSize = Math.min(Math.max(smallestJoystickValue, Math.min(overlayRectSize.width * 0.3, overlayRectSize.height * 0.3)), highestJoystickValue);
             //creates the dom objects for the joystick.
             //console.log(joystickSize);
@@ -1527,7 +1550,7 @@ var indieGameEvents = (function () {
             setJoystickStyle(dom, joystickSize);                                                                      //TODO resize on rezise window and orientation change
 
             //hide joystick at the beginning until no gyrosope is detected
-            if(canvas.indieGameEvents.settings.useGyroscope) {
+            if(indieGameEventsObject.settings.useGyroscope) {
                 dom.joystick.wrapper.style.display = 'none';
             }
 
@@ -1535,39 +1558,39 @@ var indieGameEvents = (function () {
 
             if (isTouchDevice()) {
                 dom.joystick.wrapper.addEventListener('touchstart', function (e) {
-                    joystickTouchStartAction(e, canvas);
+                    joystickTouchStartAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('touchmove', function (e) {
-                    joystickMoveAction(e, canvas);
+                    joystickMoveAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('touchend', function (e) {
-                    joystickReleaseAction(e, canvas);
+                    joystickReleaseAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
             } else if (isPointer()) {
                 dom.joystick.wrapper.addEventListener('pointerdown', function (e) {
-                    joystickTouchStartAction(e);
+                    joystickTouchStartAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('pointermove', function (e) {
-                    joystickMoveAction(e, canvas);
+                    joystickMoveAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('pointerup', function (e) {
-                    joystickReleaseAction(e, canvas);
+                    joystickReleaseAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
             } else if (isMSPointer()) {
                 dom.joystick.wrapper.addEventListener('MSPointerDown', function (e) {
-                    joystickTouchStartAction(e, canvas);
+                    joystickTouchStartAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('MSPointerMove', function (e) {
-                    joystickMoveAction(e, canvas);
+                    joystickMoveAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
                 dom.joystick.wrapper.addEventListener('MSPointerUp', function (e) {
-                    joystickReleaseAction(e, canvas);
+                    joystickReleaseAction(e, canvas, indieGameEventsObject);
                 }, {passive: true});
             }
         }
 
         /* if we use buttons for the touch movements */
-        else if ((canvas.indieGameEvents.settings.touchDirectionController === 'buttons' || canvas.indieGameEvents.settings.touchDirectionController === 'button' ) && canvas.indieGameEvents.directions) {
+        else if ((indieGameEventsObject.settings.touchDirectionController === 'buttons' || indieGameEventsObject.settings.touchDirectionController === 'button' ) && indieGameEventsObject.directions) {
             var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 130,
                 directionButtonMargin = 2, buttonEvents;
 
@@ -1602,7 +1625,7 @@ var indieGameEvents = (function () {
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.right);
             }
 
-            if (canvas.indieGameEvents.settings.useEightTouchDirections) {
+            if (indieGameEventsObject.settings.useEightTouchDirections) {
                 if (events.indexOf('move-left') !== -1 && events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                     dom.directionButtons.leftup = document.createElement('button');
                     dom.directionButtons.leftup.innerHTML = "🡼";
@@ -1650,12 +1673,12 @@ var indieGameEvents = (function () {
             translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
 
             //hide direction buttons at the beginning until no gyrosope is detected
-            if(canvas.indieGameEvents.settings.useGyroscope) {
+            if(indieGameEventsObject.settings.useGyroscope) {
                 dom.directionButtons.wrapper.style.display = 'none';
             }
         }
 
-        if ((events.indexOf('action-1') !== -1 && !canvas.indieGameEvents.settings.doubleTabAction1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
+        if ((events.indexOf('action-1') !== -1 && !indieGameEventsObject.settings.doubleTabAction1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
             var smallestActionButtonValue = 70, highestActionButtonValue = 140, actionButtonSize;
 
             actionButtonSize = Math.min(Math.max(smallestActionButtonValue, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestActionButtonValue);
@@ -1670,7 +1693,7 @@ var indieGameEvents = (function () {
             dom.actionButtons.wrapper = document.createElement('div');
             dom.actionButtons.wrapper.className += 'action-buttons-wrapper';
 
-            if (events.indexOf('action-1') !== -1 && !canvas.indieGameEvents.settings.doubleTabAction1) {
+            if (events.indexOf('action-1') !== -1 && !indieGameEventsObject.settings.doubleTabAction1) {
                 dom.actionButtons.action1 = document.createElement('button');
                 dom.actionButtons.action1.name = 'action-1';
                 dom.actionButtons.action1.className += 'action-1-button';
@@ -1709,7 +1732,7 @@ var indieGameEvents = (function () {
 
             setActionButtonsStyle(dom.actionButtons, actionButtonSize, directionButtonMargin);
             dom.overlay.appendChild(dom.actionButtons.wrapper);
-            translateActionButtonEvents(dom.actionButtons.wrapper, canvas);
+            translateActionButtonEvents(dom.actionButtons.wrapper, canvas, indieGameEventsObject);
         }
 
         if (events.indexOf('open-map') !== -1) {
@@ -1759,7 +1782,7 @@ var indieGameEvents = (function () {
         }
 
 
-        if (events.indexOf('dismiss') !== -1 && canvas.indieGameEvents.settings.touchDismissButton) {
+        if (events.indexOf('dismiss') !== -1 && indieGameEventsObject.settings.touchDismissButton) {
             var dismissButtonSize, dismissButtonMinSize = 60, dismissButtonMaxSize = 130;
 
             dismissButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
@@ -1796,7 +1819,7 @@ var indieGameEvents = (function () {
         }
 
 
-        if (events.indexOf('open-menu') && canvas.indieGameEvents.settings.menuButton) {
+        if (events.indexOf('open-menu') && indieGameEventsObject.settings.menuButton) {
             var menuButtonSize, menuButtonMinSize = 60, menuButtonMaxSize = 130, menuButtonPosition;
 
             menuButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
@@ -1846,6 +1869,9 @@ var indieGameEvents = (function () {
             //TODO add + and - symbol
         }
 
+        dom.overlay.addEventListener("touchend", function (e) {
+            e.preventDefault();
+        });
 
         document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
 
@@ -1871,27 +1897,27 @@ var indieGameEvents = (function () {
         }, 100);
     }
 
-    function hideTouchMenuButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.menuButton) {
-            canvas.indieGameEvents.touchInterface.domElements.menuButton.style.display = "none";
+    function hideTouchMenuButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
+            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "none";
         }
     }
 
-    function hideTouchMapButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
-            canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "none";
+    function hideTouchMapButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
+            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
         }
     }
 
-    function showTouchMapButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.mapButton) {
-            canvas.indieGameEvents.touchInterface.domElements.mapButton.style.display = "block";
+    function showTouchMapButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
+            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "block";
         }
     }
 
-    function hideTouchDismissButton() {
-        if(canvas.indieGameEvents.touchInterface && canvas.indieGameEvents.touchInterface.domElements && canvas.indieGameEvents.touchInterface.domElements.dismissButton) {
-            canvas.indieGameEvents.touchInterface.domElements.dismissButton.style.display = "none";
+    function hideTouchDismissButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.dismissButton) {
+            indieGameEventsObject.touchInterface.domElements.dismissButton.style.display = "none";
         }
     }
 
@@ -1996,32 +2022,32 @@ var indieGameEvents = (function () {
         );
     }
 
-    function translateActionButtonEvents(buttonField, canvas) {
+    function translateActionButtonEvents(buttonField, canvas, indieGameEventsObject) {
         if (isTouchDevice()) {
             buttonField.addEventListener('touchstart', function (e) {
-                actionTouchButtonStartAction(e, buttonField, canvas)
+                actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
             buttonField.addEventListener('touchend', function (e) {
-                actionTouchButtonEndAction(e, buttonField, canvas)
+                actionTouchButtonEndAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
         } else if (isPointer()) {
             buttonField.addEventListener('pointerdown', function (e) {
-                actionTouchButtonStartAction(e, buttonField, canvas)
+                actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
             buttonField.addEventListener('pointerup', function (e) {
-                actionTouchButtonEndAction(e, buttonField, canvas)
+                actionTouchButtonEndAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
         } else if (isMSPointer()) {
             buttonField.addEventListener('MSPointerDown', function (e) {
-                actionTouchButtonStartAction(e, buttonField, canvas)
+                actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
             buttonField.addEventListener('MSPointerUp', function (e) {
-                actionTouchButtonEndAction(e, buttonField, canvas)
+                actionTouchButtonEndAction(e, buttonField, canvas, indieGameEventsObject)
             }, {passive: true});
         }
     }
 
-    function actionTouchButtonStartAction(e, buttonField, canvas) {
+    function actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject) {
         var targets = {}, i;
 
         if (e.changedTouches[0].target) {
@@ -2038,7 +2064,7 @@ var indieGameEvents = (function () {
 
         for (var target in targets) {
             if (targets.hasOwnProperty(target)) {
-                canvas.indieGameEvents.eventStates[targets[target].name] = true;
+                indieGameEventsObject.eventStates[targets[target].name] = true;
                 targets[target].buttonPressed = window.requestAnimationFrame(function () {
                     actionTouchButtonEventDispatchLoop(targets[target], buttonField, canvas)
                 });
@@ -2061,7 +2087,7 @@ var indieGameEvents = (function () {
         }
     }
 
-    function actionTouchButtonEndAction(e, buttonField, canvas) {
+    function actionTouchButtonEndAction(e, buttonField, canvas, indieGameEventsObject) {
         var targets = {}, i;
 
         if(e.changedTouches[0].target) {
@@ -2080,7 +2106,7 @@ var indieGameEvents = (function () {
         for(var target in targets) {
             if(targets.hasOwnProperty(target)) {
                 if (targets[target].buttonPressed) {
-                    canvas.indieGameEvents.eventStates[targets[target].name] = false;
+                    indieGameEventsObject.eventStates[targets[target].name] = false;
                     window.cancelAnimationFrame(targets[target].buttonPressed);
                     targets[target].buttonPressed = false;
                 }
@@ -2118,7 +2144,7 @@ var indieGameEvents = (function () {
 
 
     //joystick actions
-    function joystickTouchStartAction(e, canvas) {
+    function joystickTouchStartAction(e, canvas, indieGameEventsObject) {
         var data = getJoystickTouchData(e);
 
         //out of bounce check
@@ -2128,11 +2154,12 @@ var indieGameEvents = (function () {
         }
 
         if (!data.innerCircle.eventDispatchID) {
-            data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
+            data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas, indieGameEventsObject)});
         }
+
     }
 
-    function joystickMoveAction(e, canvas) {
+    function joystickMoveAction(e, canvas, indieGameEventsObject) {
         var data = getJoystickTouchData(e),
             currentPoint = {x: data.xPos, y: data.yPos},
             distance = getDistance(data.midPoint, currentPoint);
@@ -2160,14 +2187,14 @@ var indieGameEvents = (function () {
 
         window.cancelAnimationFrame(data.innerCircle.eventDispatchID);
 
-        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
+        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas, indieGameEventsObject)});
 
 
         data.innerCircle.style.left = data.xPos + "px";
         data.innerCircle.style.top = data.yPos + "px";
     }
 
-    function joystickReleaseAction(e, canvas) {
+    function joystickReleaseAction(e, canvas, indieGameEventsObject) {
         var data = getJoystickTouchData(e);
 
         data.innerCircle.style.transition = '0.2s ease';
@@ -2181,10 +2208,10 @@ var indieGameEvents = (function () {
         window.cancelAnimationFrame(data.innerCircle.eventDispatchID);
         data.innerCircle.eventDispatchID = null;
 
-        canvas.indieGameEvents.eventStates["move-left"] = false;
-        canvas.indieGameEvents.eventStates["move-right"] = false;
-        canvas.indieGameEvents.eventStates["move-up"] = false;
-        canvas.indieGameEvents.eventStates["move-down"] = false;
+        indieGameEventsObject.eventStates["move-left"] = false;
+        indieGameEventsObject.eventStates["move-right"] = false;
+        indieGameEventsObject.eventStates["move-up"] = false;
+        indieGameEventsObject.eventStates["move-down"] = false;
     }
 
     function getJoystickTouchData(e) {
@@ -2200,16 +2227,16 @@ var indieGameEvents = (function () {
         };
     }
 
-    function triggerJoystickDirectionEvents(data, canvas) {                                     //aufzeichnen wie kreis aussieht?
+    function triggerJoystickDirectionEvents(data, canvas, indieGameEventsObject) {                                     //aufzeichnen wie kreis aussieht?
         var touchPoint = {x: data.xPos, y: data.yPos},
-            events = canvas.indieGameEvents.settings.events,
+            events = indieGameEventsObject.settings.events,
             distance = getDistance(touchPoint, data.midPoint),
             strength = ~~distance.map(0, data.midPoint.x, 0, 100),
             event,
             strengthDampen;
 
         //less accurate (standard mode)
-        if(canvas.indieGameEvents.settings.touchJoystickAccuracy === 'standard' || !canvas.indieGameEvents.settings.touchJoystickAccuracy) {
+        if(indieGameEventsObject.settings.touchJoystickAccuracy === 'standard' || !indieGameEventsObject.settings.touchJoystickAccuracy) {
             if (distance > data.parentPosition.width / 9) {
                 angle = getAngle(data.midPoint, touchPoint);
 
@@ -2219,8 +2246,8 @@ var indieGameEvents = (function () {
                     event.strength = strength;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-left"] = false;
-                    canvas.indieGameEvents.eventStates["move-right"] = strength;
+                    indieGameEventsObject.eventStates["move-left"] = false;
+                    indieGameEventsObject.eventStates["move-right"] = strength;
 
                 }
 
@@ -2230,8 +2257,8 @@ var indieGameEvents = (function () {
                     event.strength = strength;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-up"] = false;
-                    canvas.indieGameEvents.eventStates["move-down"] = strength;
+                    indieGameEventsObject.eventStates["move-up"] = false;
+                    indieGameEventsObject.eventStates["move-down"] = strength;
                 }
 
                 if (((angle < -112.5 && angle < 0) || (angle > 0 && angle > 112.5)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -2240,8 +2267,8 @@ var indieGameEvents = (function () {
                     event.strength = strength;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-right"] = false;
-                    canvas.indieGameEvents.eventStates["move-left"] = strength;
+                    indieGameEventsObject.eventStates["move-right"] = false;
+                    indieGameEventsObject.eventStates["move-left"] = strength;
                 }
 
                 if (angle < -28.5 && angle > -157.5 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -2250,21 +2277,21 @@ var indieGameEvents = (function () {
                     event.strength = strength;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-down"] = false;
-                    canvas.indieGameEvents.eventStates["move-up"] = strength;
+                    indieGameEventsObject.eventStates["move-down"] = false;
+                    indieGameEventsObject.eventStates["move-up"] = strength;
                 }
             }
 
             else {
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = false;
             }
         }
 
         //accurate mode (smooth)
-        else if(canvas.indieGameEvents.settings.touchJoystickAccuracy === 'smooth' || canvas.indieGameEvents.settings.touchJoystickAccuracy === 'Smooth') {
+        else if(indieGameEventsObject.settings.touchJoystickAccuracy === 'smooth' || indieGameEventsObject.settings.touchJoystickAccuracy === 'Smooth') {
             if (distance > data.parentPosition.width / 9) {
                 var angle = getAngle(data.midPoint, touchPoint);
 
@@ -2280,8 +2307,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-left"] = false;
-                    canvas.indieGameEvents.eventStates["move-right"] = event.strength;
+                    indieGameEventsObject.eventStates["move-left"] = false;
+                    indieGameEventsObject.eventStates["move-right"] = event.strength;
                 }
 
                 if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -2296,8 +2323,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-up"] = false;
-                    canvas.indieGameEvents.eventStates["move-down"] = event.strength;
+                    indieGameEventsObject.eventStates["move-up"] = false;
+                    indieGameEventsObject.eventStates["move-down"] = event.strength;
                 }
 
                 if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
@@ -2310,8 +2337,8 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-right"] = false;
-                    canvas.indieGameEvents.eventStates["move-left"] = event.strength;
+                    indieGameEventsObject.eventStates["move-right"] = false;
+                    indieGameEventsObject.eventStates["move-left"] = event.strength;
                    // console.log(angle);
                 }
 
@@ -2327,20 +2354,20 @@ var indieGameEvents = (function () {
                     event.strength = strength * strengthDampen;
                     canvas.dispatchEvent(event);
 
-                    canvas.indieGameEvents.eventStates["move-down"] = false;
-                    canvas.indieGameEvents.eventStates["move-up"] = event.strength;
+                    indieGameEventsObject.eventStates["move-down"] = false;
+                    indieGameEventsObject.eventStates["move-up"] = event.strength;
                 }
             }
 
             else {
-                canvas.indieGameEvents.eventStates["move-left"] = false;
-                canvas.indieGameEvents.eventStates["move-right"] = false;
-                canvas.indieGameEvents.eventStates["move-up"] = false;
-                canvas.indieGameEvents.eventStates["move-down"] = false;
+                indieGameEventsObject.eventStates["move-left"] = false;
+                indieGameEventsObject.eventStates["move-right"] = false;
+                indieGameEventsObject.eventStates["move-up"] = false;
+                indieGameEventsObject.eventStates["move-down"] = false;
             }
         }
 
-        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas)});
+        data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas, indieGameEventsObject)});
     }
 
 
@@ -2420,7 +2447,7 @@ var indieGameEvents = (function () {
             if (target.name) {
                 for (var key in buttonEvents[target.name]) {
                     if (buttonEvents[target.name].hasOwnProperty(key)) {
-                        canvas.indieGameEvents.eventStates[buttonEvents[target.name][key]] = 100;
+                        indieGameEventsObject.eventStates[buttonEvents[target.name][key]] = 100;
                     }
                 }
             }
@@ -2437,7 +2464,7 @@ var indieGameEvents = (function () {
         if (target.name) {
             for (var key in buttonEvents[target.name]) {
                 if (buttonEvents[target.name].hasOwnProperty(key)) {
-                    canvas.indieGameEvents.eventStates[buttonEvents[target.name][key]] = false;
+                    indieGameEventsObject.eventStates[buttonEvents[target.name][key]] = false;
                 }
             }
         }

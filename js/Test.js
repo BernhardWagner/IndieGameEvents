@@ -6,8 +6,10 @@ bw.test1 = (function () {
 
     window.onload = function () {                             /* Unterschied Dokument on load und window onload erklären (https://stackoverflow.com/questions/588040/window-onload-vs-document-onload)*/
         var canvas = document.getElementById('canvas'),
-            ctx = canvas.getContext("2d");
-        indieGameEvents.register(canvas,{
+            ctx = canvas.getContext("2d"),
+            indie;
+
+        indie = indieGameEvents.register(canvas,{
             events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4', 'open-map', 'open-menu', 'dismiss', 'zoom', 'rotate'],               //an action could be for example a jump //zooming with keybaord + and - //keyboard rotate with numpad / * or i o
             touchDirectionController: 'joystick',
             touchJoystickAccuracy: 'smooth', //stength of the touch controller directions will get more accurate //smooth directions
@@ -65,7 +67,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('rotate', function (e) {
             console.log(e.rotation);
-            zoom += e.rotation;
+            //zoom += e.rotation;
         });
 
         canvas.addEventListener('action-1', function () {
@@ -102,8 +104,12 @@ bw.test1 = (function () {
 
             var i = 0;
 
-           if(indieGameEvents.getEventState(canvas, "move-up")) {
+           if(indieGameEvents.getEventState(indie, "move-up")) {
                console.log("Yes");
+           }
+
+           if(indieGameEvents.getEventState(indie, "action-4")) {
+               console.log("aaaa")
            }
 
             requestAnimationFrame(draw);
