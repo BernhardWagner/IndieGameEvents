@@ -148,7 +148,7 @@ var indieGameEvents = (function () {
     function showTouchDismissButton(indieGameEventsObject) {
         if (indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
-                indieGameEventsObject.touchInterface.domElements.dismissButton.display = 'block';
+                indieGameEventsObject.touchInterface.domElements.dismissButton.style.display = 'block';
             }
         }
     }
@@ -706,7 +706,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('action-1')) {
-            keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = function () {
+            keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = keyBoardEvents[keyMapping.action1R] = function () {
                 event = new CustomEvent('action-1');
                 canvas.dispatchEvent(event);
 
@@ -715,7 +715,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('action-2')) {
-            keyBoardEvents[keyMapping.action2L] = keyBoardEvents[keyMapping.action2N] = keyBoardEvents[keyMapping.action2NP] = keyBoardEvents[keyMapping.action2Strg] = function () {
+            keyBoardEvents[keyMapping.action2L] = keyBoardEvents[keyMapping.action2N] = keyBoardEvents[keyMapping.action2NP] = keyBoardEvents[keyMapping.action2Strg] = keyBoardEvents[keyMapping.action2R] = function () {
                 event = new CustomEvent('action-2');
                 canvas.dispatchEvent(event);
 
@@ -724,7 +724,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('action-3')) {
-            keyBoardEvents[keyMapping.action3L] = keyBoardEvents[keyMapping.action3N] = keyBoardEvents[keyMapping.action3NP] = keyBoardEvents[keyMapping.action3Alt] = function () {
+            keyBoardEvents[keyMapping.action3L] = keyBoardEvents[keyMapping.action3N] = keyBoardEvents[keyMapping.action3NP] = keyBoardEvents[keyMapping.action3Alt] = keyBoardEvents[keyMapping.action3R] = function () {
                 event = new CustomEvent('action-3');
                 canvas.dispatchEvent(event);
 
@@ -733,7 +733,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('action-4')) {
-            keyBoardEvents[keyMapping.action4L] = keyBoardEvents[keyMapping.action4N] = keyBoardEvents[keyMapping.action4NP] = keyBoardEvents[keyMapping.action4Space] = function () {
+            keyBoardEvents[keyMapping.action4L] = keyBoardEvents[keyMapping.action4N] = keyBoardEvents[keyMapping.action4NP] = keyBoardEvents[keyMapping.action4R] = keyBoardEvents[keyMapping.action4Space] = function () {
                 event = new CustomEvent('action-4');
                 canvas.dispatchEvent(event);
 
@@ -743,7 +743,7 @@ var indieGameEvents = (function () {
 
         //zooming
         if(events.indexOf('zoom')) {
-            keyBoardEvents[keyMapping.zoomInNP] = keyBoardEvents[keyMapping.zoomInL] = function () {
+            keyBoardEvents[keyMapping.zoomInNP] = keyBoardEvents[keyMapping.zoomInL] = keyBoardEvents[keyMapping.zoomOutR] = function () {
                 event = new CustomEvent('zoom');
                 event.scale = 0.1;
                 canvas.dispatchEvent(event);
@@ -752,7 +752,7 @@ var indieGameEvents = (function () {
 
             };
 
-            keyBoardEvents[keyMapping.zoomOutNP] = keyBoardEvents[keyMapping.zoomOutL] = function () {
+            keyBoardEvents[keyMapping.zoomOutNP] = keyBoardEvents[keyMapping.zoomOutL] = keyBoardEvents[keyMapping.zoomOutR] = function () {
                 event = new CustomEvent('zoom');
                 event.scale = -0.1;
                 canvas.dispatchEvent(event);
@@ -763,7 +763,7 @@ var indieGameEvents = (function () {
 
         //rotating
         if(events.indexOf('rotate')) {
-            keyBoardEvents[keyMapping.rotateRightNP] = keyBoardEvents[keyMapping.rotateRightL] = function () {
+            keyBoardEvents[keyMapping.rotateRightNP] = keyBoardEvents[keyMapping.rotateRightL] = keyEventMap[keyMapping.rotateRightR] = function () {
                 event = new CustomEvent('rotate');
                 event.rotation = 0.1;
                 canvas.dispatchEvent(event);
@@ -771,7 +771,7 @@ var indieGameEvents = (function () {
                 indieGameEventsObject.eventStates['rotate'] = 0.1;
             };
 
-            keyBoardEvents[keyMapping.rotateLeftNP] = keyBoardEvents[keyMapping.rotateLeftL] = function () {
+            keyBoardEvents[keyMapping.rotateLeftNP] = keyBoardEvents[keyMapping.rotateLeftL] = keyBoardEvents[keyMapping.rotateLeftR] = function () {
                 event = new CustomEvent('rotate');
                 event.rotation = -0.1;
                 canvas.dispatchEvent(event);
@@ -783,7 +783,7 @@ var indieGameEvents = (function () {
 
         //open menu
         if(events.indexOf('open-menu')) {
-            keyBoardEvents[keyMapping.openMenu] = function () {
+            keyBoardEvents[keyMapping.openMenu] = keyBoardEvents[keyMapping.openMenu2] = function (e) {
                 event = new CustomEvent('open-menu');
                 canvas.dispatchEvent(event);
 
@@ -791,6 +791,8 @@ var indieGameEvents = (function () {
                 hideTouchMenuButton(indieGameEventsObject);
                 hideTouchMapButton(indieGameEventsObject);
                 showTouchDismissButton(indieGameEventsObject);
+
+                e.preventDefault();
             }
         }
 
@@ -1913,12 +1915,6 @@ var indieGameEvents = (function () {
         }, 100);
     }
 
-    function hideTouchMenuButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
-            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "none";
-        }
-    }
-
     function hideTouchMapButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
             indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
@@ -1928,6 +1924,18 @@ var indieGameEvents = (function () {
     function showTouchMapButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
             indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "block";
+        }
+    }
+
+    function hideTouchMenuButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
+            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
+        }
+    }
+
+    function showTouchMenuButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
+            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "block";
         }
     }
 
@@ -2632,7 +2640,7 @@ var indieGameEvents = (function () {
                 return true;
             if (!(key in timers)) {
                 timers[key] = requestAnimationFrame(function () {
-                    repeatAction(key, keys);
+                    repeatAction(key, keys, event);
                 });
             }
             return false;
@@ -2670,10 +2678,10 @@ var indieGameEvents = (function () {
             timers = {};
         };
 
-        repeatAction = function (key, keys) {
-            keys[key]();
+        repeatAction = function (key, keys, e) {
+            keys[key](e);
             timers[key] = requestAnimationFrame(function () {
-                repeatAction(key, keys)
+                repeatAction(key, keys, e)
             });
 
         }
