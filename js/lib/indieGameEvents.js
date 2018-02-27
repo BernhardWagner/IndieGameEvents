@@ -607,6 +607,13 @@ var indieGameEvents = (function () {
         keyMapping.action3L = 75;
         keyMapping.action4L = 76;
 
+
+        //basic remote control support
+        keyMapping.action1R = 403;
+        keyMapping.action2R = 404;
+        keyMapping.action3R = 405;
+        keyMapping.action4R = 406;
+
         //zooming
         //numpad
         keyMapping.zoomInNP = 107;
@@ -615,6 +622,10 @@ var indieGameEvents = (function () {
         //letters
         keyMapping.zoomInL = 187;
         keyMapping.zoomOutL = 189;
+
+        //remote
+        keyMapping.zoomInR = 447;
+        keyMapping.zoomOutR = 448;
 
 
         //rotating
@@ -626,8 +637,13 @@ var indieGameEvents = (function () {
         keyMapping.rotateLeftL = 73;
         keyMapping.rotateRightL = 79;
 
+        //remote
+        keyMapping.rotateLeftR = 427;
+        keyMapping.rotateRightR = 427;
+
         //p for pause (open menu)
         keyMapping.openMenu = 80;
+        keyMapping.openMenu2 = 19;
 
         //m for map
         keyMapping.openMap = 77;
@@ -642,12 +658,12 @@ var indieGameEvents = (function () {
         keyEventMap[keyMapping.right] = "move-right";
         keyEventMap[keyMapping.up] = "move-up";
         keyEventMap[keyMapping.down] = "move-down";
-        keyEventMap[keyMapping.action1Space] = keyEventMap[keyMapping.action1NP] = keyEventMap[keyMapping.action1N] = keyEventMap[keyMapping.action1L] = "action-1";
-        keyEventMap[keyMapping.action2Strg] = keyEventMap[keyMapping.action2NP] = keyEventMap[keyMapping.action2N] = keyEventMap[keyMapping.action2L] = "action-2";
-        keyEventMap[keyMapping.action3Alt] = keyEventMap[keyMapping.action3NP] = keyEventMap[keyMapping.action3N] = keyEventMap[keyMapping.action3L] = "action-3";
-        keyEventMap[keyMapping.action4Shift] = keyEventMap[keyMapping.action4NP] = keyEventMap[keyMapping.action4N] = keyEventMap[keyMapping.action4L] = "action-4";
-        keyEventMap[keyMapping.zoomInNP] = keyEventMap[keyMapping.zoomInL] = keyEventMap[keyMapping.zoomOutNP] = keyEventMap[keyMapping.zoomOutL] = "zoom";
-        keyEventMap[keyMapping.rotateLeftNP] =  keyEventMap[keyMapping.rotateLeftL] = keyEventMap[keyMapping.rotateRightNP] =  keyEventMap[keyMapping.rotateRightL]  = "rotate";
+        keyEventMap[keyMapping.action1Space] = keyEventMap[keyMapping.action1NP] = keyEventMap[keyMapping.action1N] = keyEventMap[keyMapping.action1L] = keyEventMap[keyMapping.action1R] = "action-1";
+        keyEventMap[keyMapping.action2Strg] = keyEventMap[keyMapping.action2NP] = keyEventMap[keyMapping.action2N] = keyEventMap[keyMapping.action2L] = keyEventMap[keyMapping.action2R] = "action-2";
+        keyEventMap[keyMapping.action3Alt] = keyEventMap[keyMapping.action3NP] = keyEventMap[keyMapping.action3N] = keyEventMap[keyMapping.action3L] = keyEventMap[keyMapping.action3R] = "action-3";
+        keyEventMap[keyMapping.action4Shift] = keyEventMap[keyMapping.action4NP] = keyEventMap[keyMapping.action4N] = keyEventMap[keyMapping.action4L] = keyEventMap[keyMapping.action4R] = "action-4";
+        keyEventMap[keyMapping.zoomInNP] = keyEventMap[keyMapping.zoomInL] = keyEventMap[keyMapping.zoomOutNP] = keyEventMap[keyMapping.zoomOutL] = keyEventMap[keyMapping.zoomInR] = keyEventMap[keyMapping.zoomOutR] = "zoom";
+        keyEventMap[keyMapping.rotateLeftNP] =  keyEventMap[keyMapping.rotateLeftL] = keyEventMap[keyMapping.rotateRightNP] =  keyEventMap[keyMapping.rotateRightL] =  keyEventMap[keyMapping.rotateRightR] =keyEventMap[keyMapping.rotateLeftR]  = "rotate";
 
         if (events.indexOf('move-all') !== -1 || events.indexOf('move-left') !== -1) {
             keyBoardEvents[keyMapping.left] = function () {              //left
