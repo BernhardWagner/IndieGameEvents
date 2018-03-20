@@ -36,8 +36,9 @@ var indieGameEvents = (function () {
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
         useGyroscope: true,                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
-        useSpaceStrgAltShiftActions: true,                                                             //when true use the space for action 1, strg for action 2, alt for action 3 and shift for action 3 too
-                                                                                                        //else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l
+        useSpaceStrgAltShiftActions: true,                                                             //when true use the space for action 1, strg for action 2, alt for action 3 and shift for action 3 too         //else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l
+        enterAction1Key: false,                                                                          //to support remote controls better: adds the enter key to the action1 event         //to support remote controls better: adds the back key to the dismiss action
+
     };
 
     /*init of gyronorm.js*/
@@ -95,7 +96,9 @@ var indieGameEvents = (function () {
             touchDismissButton: settings.touchDismissButton || _standardSettings.touchDismissButton,
             menuButton: settings.menuButton || _standardSettings.menuButton,
             useGyroscope: settings.useGyroscope || _standardSettings.useGyroscope,
-            useSpaceStrgAltShiftActions: settings.useSpaceStrgAltShiftActions || _standardSettings.useSpaceStrgAltShiftActions
+            useSpaceStrgAltShiftActions: settings.useSpaceStrgAltShiftActions || _standardSettings.useSpaceStrgAltShiftActions,
+            rotateRightMouse: settings.rotateRightMouse || _standardSettings.rotateRightMouse,
+            enterAction1Key: settings.enterAction1Key || _standardSettings.enterAction1Key
 
         };
 
@@ -336,8 +339,6 @@ var indieGameEvents = (function () {
         if (events.indexOf("rotate")) {
             canvas.addEventListener('mousedown', mouseDown, false);
             window.addEventListener('mouseup', mouseUp, false);
-
-
         }
 
         function mouseUp(e) {
@@ -589,6 +590,11 @@ var indieGameEvents = (function () {
             keyMapping.action4Shift = 16;
         }
 
+
+        if(indieGameEventsObject.settings.enterAction1Key) {
+            keyMapping.action1Enter = 13;
+        }
+
         //numpad
         keyMapping.action1NP = 97;
         keyMapping.action2NP = 98;
@@ -629,7 +635,7 @@ var indieGameEvents = (function () {
 
 
         //rotating
-        //numpad (/ and x)
+        //numpad (/ and *)
         keyMapping.rotateLeftNP = 111;
         keyMapping.rotateRightNP = 106;
 
@@ -658,7 +664,7 @@ var indieGameEvents = (function () {
         keyEventMap[keyMapping.right] = "move-right";
         keyEventMap[keyMapping.up] = "move-up";
         keyEventMap[keyMapping.down] = "move-down";
-        keyEventMap[keyMapping.action1Space] = keyEventMap[keyMapping.action1NP] = keyEventMap[keyMapping.action1N] = keyEventMap[keyMapping.action1L] = keyEventMap[keyMapping.action1R] = "action-1";
+        keyEventMap[keyMapping.action1Space] = keyEventMap[keyMapping.action1NP] = keyEventMap[keyMapping.action1N] = keyEventMap[keyMapping.action1L] = keyEventMap[keyMapping.action1R] = keyEventMap[keyMapping.action1Enter] = "action-1";
         keyEventMap[keyMapping.action2Strg] = keyEventMap[keyMapping.action2NP] = keyEventMap[keyMapping.action2N] = keyEventMap[keyMapping.action2L] = keyEventMap[keyMapping.action2R] = "action-2";
         keyEventMap[keyMapping.action3Alt] = keyEventMap[keyMapping.action3NP] = keyEventMap[keyMapping.action3N] = keyEventMap[keyMapping.action3L] = keyEventMap[keyMapping.action3R] = "action-3";
         keyEventMap[keyMapping.action4Shift] = keyEventMap[keyMapping.action4NP] = keyEventMap[keyMapping.action4N] = keyEventMap[keyMapping.action4L] = keyEventMap[keyMapping.action4R] = "action-4";
@@ -706,7 +712,7 @@ var indieGameEvents = (function () {
         }
 
         if(events.indexOf('action-1')) {
-            keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = keyBoardEvents[keyMapping.action1R] = function () {
+            keyBoardEvents[keyMapping.action1L] = keyBoardEvents[keyMapping.action1N] = keyBoardEvents[keyMapping.action1NP] = keyBoardEvents[keyMapping.action1Space] = keyBoardEvents[keyMapping.action1R] = keyBoardEvents[keyMapping.action1Enter] = function () {
                 event = new CustomEvent('action-1');
                 canvas.dispatchEvent(event);
 
@@ -864,7 +870,6 @@ var indieGameEvents = (function () {
     //https://github.com/luser/gamepadtest/blob/master/gamepadtest.js
     function registerConnectionGamepadEvents(indieGameEventsObject) {
         var canvas = indieGameEventsObject.canvas;
-
         if (_gamepadAPI) {
             window.addEventListener("gamepadconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
             window.addEventListener("gamepaddisconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});

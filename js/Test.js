@@ -14,8 +14,11 @@ bw.test1 = (function () {
             touchDirectionController: 'joystick',
             touchJoystickAccuracy: 'smooth', //stength of the touch controller directions will get more accurate //smooth directions
             useWASDDirections: true,
+            rotateRightMouse: true,
+            enterAction1Key: true,                      //to support remote controls better
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
+
 
 
         //bei zoom unt rotate event immer += verwenden für value
