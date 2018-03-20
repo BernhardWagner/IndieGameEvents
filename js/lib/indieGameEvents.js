@@ -630,8 +630,8 @@ var indieGameEvents = (function () {
         keyMapping.zoomOutL = 189;
 
         //remote
-        keyMapping.zoomInR = 447;
-        keyMapping.zoomOutR = 448;
+        keyMapping.zoomInR = 56;
+        keyMapping.zoomOutR = 57;
 
 
         //rotating
