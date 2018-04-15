@@ -977,6 +977,8 @@ var indieGameEvents = (function () {
                                 else if(i === 1) {action2Triggered = true;}
                                 else if(i === 2) {action3Triggered = true;}
                                 else if(i === 3) {action4Triggered = true;}
+                                else if(i === 11 || i === 10) {zoomTriggered = true;}
+                                else if(i === 6 || i === 4) {rotateTriggered = true;}
                             }
                         }
 
@@ -1283,10 +1285,14 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('zoom');
                 event.scale = 0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["zoom"] = 0.1;
             } else if (i === 10) {
                 event = new CustomEvent('zoom');
                 event.scale = -0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["zoom"] = -0.1;
             }
         }
 
@@ -1295,10 +1301,15 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('rotate');
                 event.rotation = 0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["rotate"] = 0.1;
+
             } else if (i === 4) {
                 event = new CustomEvent('rotate');
                 event.rotation = -0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["rotate"] = -0.1;
             }
         }
     }
