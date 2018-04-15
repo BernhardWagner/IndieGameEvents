@@ -337,7 +337,7 @@ var indieGameEvents = (function () {
     
     //MOUSE
     function registerMouseEvents(canvas, events, settings, indieGameEventsObject) {
-        var oldClientX = 0, clickPosition, data, eventDispatchID, point;
+        var oldClientX = 0, clickPosition, data, eventDispatchID, point, wheeling;
 
         point = document.createElement("div");
         point.setAttribute("style",
@@ -357,8 +357,9 @@ var indieGameEvents = (function () {
 
         //zoom
         if (events.indexOf("zoom") !== -1) {
+            wheeling = false;
             canvas.addEventListener("wheel", function (e) {
-                translateMouseWheelAction(e, canvas, events, settings)
+                translateMouseWheelAction(e, canvas, events, settings, indieGameEventsObject, wheeling)
             });
         }
 
@@ -369,6 +370,8 @@ var indieGameEvents = (function () {
 
         function mouseUp(e) {
             window.removeEventListener('mousemove', moveRotate, true);
+
+            indieGameEventsObject.eventStates["rotate"] = false;
 
             if (e.which === 2) {
                 if (eventDispatchID) {
@@ -412,7 +415,11 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('rotate');
                 event.rotation = deltaX / 100;
 
+                indieGameEventsObject.eventStates["rotate"] = event.rotation;
+
                 canvas.dispatchEvent(event);
+            } else {
+                indieGameEventsObject.eventStates["rotate"] = false;
             }
             oldClientX = e.clientX;
         }
@@ -528,15 +535,23 @@ var indieGameEvents = (function () {
 
 
 
-    function  translateMouseWheelAction(e, canvas, events, settings) {
+    function  translateMouseWheelAction(e, canvas, events, settings, indieGameEventsObject, wheeling) {
         var event;
 
         //zooming is possible with alt and strg key
-        if(e.altKey || e.ctrlKey) {
+        if(e.altKey || e.ctrlKey || e.shiftKey) {
             event = new CustomEvent('zoom');
             event.scale = e.deltaY / -1000;
 
             canvas.dispatchEvent(event);
+
+            indieGameEventsObject.eventStates["zoom"] = event.scale;
+
+            clearTimeout(wheeling);
+            wheeling = setTimeout(function() {
+                indieGameEventsObject.eventStates["zoom"] = false;
+                wheeling = undefined;
+            }, 250);
 
             e.preventDefault();
         }
@@ -914,7 +929,7 @@ var indieGameEvents = (function () {
     }
     
     function pollGamepadEvents(canvas, indieGameEventsObject) {
-        var gamepadKey, gamepad, i, button, pressed, strength, events, leftRightTriggered, upDownTriggered, action1Triggered, action2Triggered, action3Triggered ,action4Triggered;
+        var gamepadKey, gamepad, i, button, pressed, strength, events, leftRightTriggered, upDownTriggered, action1Triggered, action2Triggered, action3Triggered ,action4Triggered, zoomTriggered, rotateTriggered;
 
         events = indieGameEventsObject.settings.events;
 
@@ -928,6 +943,8 @@ var indieGameEvents = (function () {
                     action2Triggered = false;
                     action3Triggered = false;
                     action4Triggered = false;
+                    zoomTriggered = false;
+                    rotateTriggered = false;
 
                     if(gamepad && typeof(gamepad) === 'object') {
                         for (i = 0; i < gamepad.buttons.length; i++) {
@@ -950,6 +967,8 @@ var indieGameEvents = (function () {
                                 else if(i === 2) {action2Triggered = true;}
                                 else if(i === 1) {action3Triggered = true;}
                                 else if(i === 3) {action4Triggered = true;}
+                                else if(i === 11 || i === 10) {zoomTriggered = true;}
+                                else if(i === 5 || i === 4) {rotateTriggered = true;}
 
                             } else if (pressed) {                                 //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
                                 nonStandardGamepadButtonActions(i, canvas, events, indieGameEventsObject);
@@ -1011,6 +1030,12 @@ var indieGameEvents = (function () {
                             }
                             if(!action4Triggered) {
                                 indieGameEventsObject.eventStates["action-4"] = false;
+                            }
+                            if(!rotateTriggered) {
+                                indieGameEventsObject.eventStates["rotate"] = false;
+                            }
+                            if(!zoomTriggered) {
+                                indieGameEventsObject.eventStates["zoom"] = false;
                             }
                         }
                     }
@@ -1343,10 +1368,14 @@ var indieGameEvents = (function () {
                 event = new CustomEvent('zoom');
                 event.scale = 0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["zoom"] = 0.1;
             } else if (i === 10) {
                 event = new CustomEvent('zoom');
                 event.scale = -0.1;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["zoom"] = -0.1;
             }
         }
 

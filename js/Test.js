@@ -70,12 +70,12 @@ bw.test1 = (function () {
         });
 
         canvas.addEventListener('zoom', function (e) {
-           console.log(e.scale);
+           //console.log(e.scale);
            zoom += e.scale;
         });
 
         canvas.addEventListener('rotate', function (e) {
-            console.log(e.rotation);
+            //console.log(e.rotation);
             //zoom += e.rotation;
         });
 
@@ -113,8 +113,8 @@ bw.test1 = (function () {
 
             var i = 0;
 
-           if(indieGameEvents.getEventState(indie, "move-up")) {
-               console.log(indieGameEvents.getEventState(indie, "move-up"));
+           if(indieGameEvents.getEventState(indie, "rotate")) {
+               //console.log(indieGameEvents.getEventState(indie, "rotate"));
            }
 
            if(indieGameEvents.getEventState(indie, "action-4")) {
