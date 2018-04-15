@@ -1,10 +1,7 @@
 "use strict";
 
-//TODO add external libraries
-
 //OWN LIBRARY
 var indieGameEvents = (function () {
-    /*GLOBALS*/
     //standard settings for the library
     var _standardSettings,
         //Add Hammer.js to library
@@ -15,8 +12,6 @@ var indieGameEvents = (function () {
         _gamepadPolling,    /* if you are already polling for the gamepad Events*/
         _gn,            /* gyronorm js normalises gyroscope values */
         _gyroSettings,
-        _fps,            /* inaccurate value of the fps */
-        _lastLoop,         /* needed for the fps metering */
         _gyroCalibration,  /* calibration values for the gyroscope */
         _openMenuAllowed,   /* do not trigger open menu every frame */
         _openMapAllowed,   /* do not trigger open map every frame */
@@ -25,20 +20,18 @@ var indieGameEvents = (function () {
 
     //sets the standard settings that will be overwritten with the settings object of the user
     _standardSettings = {
-        events: [],
-        physicalInputs: ['keyboard', 'mouse', 'touch', 'controller'],                    //joystick?
+        events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4'],
+        physicalInputs: ['keyboard', 'mouse', 'touch', 'controller'],
         useWASDDirections: false,
         useArrowDirections: true,
         useEightTouchDirections: true,
         touchDirectionController: 'joystick',                                                       //virtual joystick... buttons would also be an option
-        touchJoystickAccuracy: 'standard',                                                                        //when a joystick is used there are two types static and dynamic (generates joystick on touch)
-        doubleTabAction1: false,                                                                    //when double tabbed on the screen the action 1 event will be triggered and on the touch interface the action 1 button does not appear
+        touchJoystickAccuracy: 'standard',                                                                        //when a joystick is used
         touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
         menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
-        useGyroscope: true,                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
+        useGyroscope: false,                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
         useSpaceStrgAltShiftActions: true,                                                             //when true use the space for action 1, strg for action 2, alt for action 3 and shift for action 3 too         //else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l
         enterAction1Key: false,                                                                          //to support remote controls better: adds the enter key to the action1 event         //to support remote controls better: adds the back key to the dismiss action
-
     };
 
     /*init of gyronorm.js*/
@@ -83,6 +76,10 @@ var indieGameEvents = (function () {
         //creates an empty object for the library
         indieGameEventsObject = {};
 
+        if(!settings){
+            settings = {};
+        }
+
         //sets the settings for the events (either standard settings or user settings when defined)
         indieGameEventsObject.settings = {
             events: settings.events || _standardSettings.events,                                                        //TODO: determine that inputs are correct
@@ -92,7 +89,6 @@ var indieGameEvents = (function () {
             touchDirectionController: settings.touchDirectionController || _standardSettings.touchDirectionController,
             touchJoystickAccuracy: settings.touchJoystickAccuracy || _standardSettings.touchJoystickAccuracy,
             useEightTouchDirections: settings.useEightTouchDirections || _standardSettings.useEightTouchDirections,
-            doubleTapAction1: settings.doubleTabAction1 || _standardSettings.doubleTabAction1,
             touchDismissButton: settings.touchDismissButton || _standardSettings.touchDismissButton,
             menuButton: settings.menuButton || _standardSettings.menuButton,
             useGyroscope: settings.useGyroscope || _standardSettings.useGyroscope,
@@ -163,6 +159,36 @@ var indieGameEvents = (function () {
             } else {
                 hideIndieGameTouchInterface(indieGameEventsObject);
             }
+        }
+    }
+
+    function hideTouchMapButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
+            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
+        }
+    }
+
+    function showTouchMapButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
+            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "block";
+        }
+    }
+
+    function hideTouchMenuButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
+            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "none";
+        }
+    }
+
+    function showTouchMenuButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
+            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "block";
+        }
+    }
+
+    function hideTouchDismissButton(indieGameEventsObject) {
+        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.dismissButton) {
+            indieGameEventsObject.touchInterface.domElements.dismissButton.style.display = "none";
         }
     }
 
@@ -1701,7 +1727,7 @@ var indieGameEvents = (function () {
             }
         }
 
-        if ((events.indexOf('action-1') !== -1 && !indieGameEventsObject.settings.doubleTabAction1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
+        if ((events.indexOf('action-1') !== -1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
             var smallestActionButtonValue = 70, highestActionButtonValue = 140, actionButtonSize;
 
             actionButtonSize = Math.min(Math.max(smallestActionButtonValue, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestActionButtonValue);
@@ -1716,7 +1742,7 @@ var indieGameEvents = (function () {
             dom.actionButtons.wrapper = document.createElement('div');
             dom.actionButtons.wrapper.className += 'action-buttons-wrapper';
 
-            if (events.indexOf('action-1') !== -1 && !indieGameEventsObject.settings.doubleTabAction1) {
+            if (events.indexOf('action-1') !== -1) {
                 dom.actionButtons.action1 = document.createElement('button');
                 dom.actionButtons.action1.name = 'action-1';
                 dom.actionButtons.action1.className += 'action-1-button';
@@ -1918,36 +1944,6 @@ var indieGameEvents = (function () {
                 dom.overlay.style.left = canvasPosRect.left + "px";
             }
         }, 100);
-    }
-
-    function hideTouchMapButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
-            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
-        }
-    }
-
-    function showTouchMapButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
-            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "block";
-        }
-    }
-
-    function hideTouchMenuButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
-            indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
-        }
-    }
-
-    function showTouchMenuButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
-            indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "block";
-        }
-    }
-
-    function hideTouchDismissButton(indieGameEventsObject) {
-        if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.dismissButton) {
-            indieGameEventsObject.touchInterface.domElements.dismissButton.style.display = "none";
-        }
     }
 
     function menuButtonStartAction(e, canvas, dom, events) {
@@ -2268,6 +2264,8 @@ var indieGameEvents = (function () {
         if(indieGameEventsObject.settings.touchJoystickAccuracy === 'standard' || !indieGameEventsObject.settings.touchJoystickAccuracy) {
             if (distance > data.parentPosition.width / 9) {
                 angle = getAngle(data.midPoint, touchPoint);
+                console.log(angle);
+                console.log(strength);
 
                 if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
                     //console.log('right');
@@ -2699,7 +2697,11 @@ var indieGameEvents = (function () {
         hideTouchInterface: hideIndieGameTouchInterface,
         hideTouchInterfaceWithoutX: hideIndieGameTouchInterfaceWithoutX,
         showTouchDismissButton: showTouchDismissButton,
-        getEventState: getEventState
+        getEventState: getEventState,
+        hideTouchMapButton: hideTouchMapButton,
+        showTouchMapButton: showTouchMapButton,
+        hideTouchMenuButton: hideTouchMenuButton,
+        showTouchMenuButton: showTouchMenuButton
     }
 
 
@@ -2707,9 +2709,8 @@ var indieGameEvents = (function () {
 
 //TODO Browser compatibilität testen (vielleicht gibt es tester online?)
 //TODO nicht css pointer events vergessen bei den wrappern
-//TODO hochformat und querformat bei touch interface beachten
 //TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
-//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) und bei touch zweiten joystick generieren???
+//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) (Für FAZIT) und bei touch zweiten joystick generieren???
 //TODO add zoom buttons on touch interface
 
 /*Custom Events (IE support)*/

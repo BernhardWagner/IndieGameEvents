@@ -37,11 +37,17 @@ bw.test1 = (function () {
 
         var x = 500, y = 200, zoom = 1;
 
-        canvas.addEventListener('move-right', function (e) {
-           //console.log("right");
-            //console.log(e.strength);
-           x += e.strength/100;
-        });
+        console.log([canvas]);
+
+        document.addEventListener('move-right', function (e) {
+            x += e.strength/100;
+        }, true);
+
+        // canvas.addEventListener('move-right', function (e) {
+        //    //console.log("right");
+        //     //console.log(e.strength);
+        //    x += e.strength/100;
+        // });
         canvas.addEventListener('move-up', function (e) {
             //console.log("up");
             y -= e.strength/100;
@@ -49,7 +55,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('move-left', function (e) {
            // console.log("left");
-           //console.log(e.strength);
+           console.log(e.strength);
             x -= e.strength/100;
         });
 
@@ -108,7 +114,7 @@ bw.test1 = (function () {
             var i = 0;
 
            if(indieGameEvents.getEventState(indie, "move-up")) {
-               console.log("Yes");
+               console.log(indieGameEvents.getEventState(indie, "move-up"));
            }
 
            if(indieGameEvents.getEventState(indie, "action-4")) {
