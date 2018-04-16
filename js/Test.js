@@ -16,6 +16,7 @@ bw.test1 = (function () {
             useWASDDirections: true,
             rotateRightMouse: true,
             enterAction1Key: true,                      //to support remote controls better
+            useGyroscope: true
             //events: ['moveleft', 'moveup', 'movedown']          //Moverments sollten funktionieren mit move oder wirklich einzeln registrieren
         });
 
@@ -55,7 +56,7 @@ bw.test1 = (function () {
 
         canvas.addEventListener('move-left', function (e) {
            // console.log("left");
-           console.log(e.strength);
+           //console.log(e.strength);
             x -= e.strength/100;
         });
 
@@ -75,7 +76,7 @@ bw.test1 = (function () {
         });
 
         canvas.addEventListener('rotate', function (e) {
-            //console.log(e.rotation);
+            console.log(e.rotation);
             //zoom += e.rotation;
         });
 

@@ -1480,7 +1480,7 @@ var indieGameEvents = (function () {
                 var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && _gn.isAvailable(GyroNorm.ROTATION_RATE) !== null && orientation && indieGameEventsObject.touchInterface) {
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && orientation && indieGameEventsObject.touchInterface) {
                     //if the joystick is available hide it, we dont neeed it on gyroMode
                     if(!joystickHidden && indieGameEventsObject.touchInterface.domElements.joystick) {
                         indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = 'none';
@@ -1538,8 +1538,8 @@ var indieGameEvents = (function () {
         if (gamma < -10 && gamma > -90) {
             event = new CustomEvent('move-left');
             //better mapping for the strenght of the gyroscope
-            if(gamma > -45) {
-                event.strength = gamma.map(-10, -45, 0, 100);
+            if(gamma > -30) {
+                event.strength = gamma.map(-10, -30, 0, 100);
             } else {
                 event.strength = 100;
             }
@@ -1552,7 +1552,7 @@ var indieGameEvents = (function () {
             event = new CustomEvent('move-right');
 
             if(gamma < 30) {
-                event.strength = gamma.map(10, 45, 0, 100);
+                event.strength = gamma.map(10, 30, 0, 100);
             } else {
                 event.strength = 100;
             }
@@ -1562,6 +1562,10 @@ var indieGameEvents = (function () {
             indieGameEventsObject.eventStates['move-left'] = false;
             indieGameEventsObject.eventStates['move-right'] = event.strength;
         }
+        else {
+            indieGameEventsObject.eventStates['move-right'] = false;
+            indieGameEventsObject.eventStates['move-left'] = false;
+        }
 
         if (beta < -10 && beta > -90) {
             event = new CustomEvent('move-up');
@@ -1569,7 +1573,7 @@ var indieGameEvents = (function () {
             //console.log(beta);
 
             if(beta > -30) {
-                event.strength = beta.map(-10, -45, 0, 100);
+                event.strength = beta.map(-10, -30, 0, 100);
             } else {
                 event.strength = 100;
             }
@@ -1583,7 +1587,7 @@ var indieGameEvents = (function () {
             event = new CustomEvent('move-down');
 
             if(beta < 30) {
-                event.strength = beta.map(10, 45, 0, 100);
+                event.strength = beta.map(10, 30, 0, 100);
             } else {
                 event.strength = 100;
             }
@@ -1599,8 +1603,6 @@ var indieGameEvents = (function () {
         else {
             indieGameEventsObject.eventStates['move-up'] = false;
             indieGameEventsObject.eventStates['move-down'] = false;
-            indieGameEventsObject.eventStates['move-left'] = false;
-            indieGameEventsObject.eventStates['move-right'] = false;
         }
 
     }
@@ -1759,7 +1761,7 @@ var indieGameEvents = (function () {
             dom.directionButtons.wrapper.className += 'direction-buttons-wrapper';
             setTouchDirectionButtonsStyle(dom, directionButtonSize, directionButtonMargin, events);
             dom.overlay.appendChild(dom.directionButtons.wrapper);
-            translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas);
+            translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas, indieGameEventsObject);
 
             //hide direction buttons at the beginning until no gyrosope is detected
             if(indieGameEventsObject.settings.useGyroscope) {
@@ -2478,35 +2480,35 @@ var indieGameEvents = (function () {
     }
 
     //translate the Events of the touch press to abstract events
-    function translateDirectionButtonEvents(buttonField, buttonEvents, canvas) {
+    function translateDirectionButtonEvents(buttonField, buttonEvents, canvas, indieGameEventsObject) {
         if (isTouchDevice()) {
             buttonField.addEventListener('touchstart', function (e) {
-                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
             // buttonField.addEventListener('touchmove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
             buttonField.addEventListener('touchend', function (e) {
-                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
         } else if (isPointer()) {
             buttonField.addEventListener('pointerdown', function (e) {
-                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
             // buttonField.addEventListener('pointermove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
             buttonField.addEventListener('pointerup', function (e) {
-                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
         } else if (isMSPointer()) {
             buttonField.addEventListener('MSPointerDown', function (e) {
-                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
             //  buttonField.addEventListener('MSPointerMove', function(e) {buttonFieldTouchMoveAction(e, buttonField, canvas, buttonEvents)});
             buttonField.addEventListener('MSPointerUp', function (e) {
-                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents)
+                buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject)
             }, {passive: true});
         }
     }
 
-    function buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents) {
+    function buttonFieldTouchStartAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject) {
         var target = prepareTarget(e);
 
         if (!buttonField.eventDispatcherID) {
@@ -2525,7 +2527,7 @@ var indieGameEvents = (function () {
         }
     }
 
-    function buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents) {
+    function buttonFieldTouchEndAction(e, buttonField, canvas, buttonEvents, indieGameEventsObject) {
         var target = prepareTarget(e);
 
         if (target.name) {
