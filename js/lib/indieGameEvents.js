@@ -267,7 +267,7 @@ var indieGameEvents = (function () {
 
         //if gyroscope mode is enabled
         if (indieGameEventsObject.settings.useGyroscope === true && isTouchDevice()) {
-            registerGyroscope(canvas, indieGameEventsObject);
+            registerGyroscope(canvas, indieGameEventsObject)
             //https://github.com/tomgco/gyro.js
             //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders deswegen gyronorm.js)
         }
@@ -1473,14 +1473,16 @@ var indieGameEvents = (function () {
 
     /*GYROSCOPE*/
     function registerGyroscope(canvas, indieGameEventsObject) {
-        var joystickHidden = true, buttonsHidden = true; //joysticks are hidden on standard and showed when device orientation and rotation rate is not supported
+        var joystickHidden = true, buttonsHidden = true, counter; //joysticks are hidden on standard and showed when device orientation and rotation rate is not supported
+
+        counter = 0;
 
         _gn.init(_gyroSettings).then(function() {
             _gn.start(function(data){
                 var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
-                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) !== null && orientation && indieGameEventsObject.touchInterface) {
+                if(_gn.isAvailable(GyroNorm.DEVICE_ORIENTATION) && orientation && indieGameEventsObject.touchInterface || counter < 50) {
                     //if the joystick is available hide it, we dont neeed it on gyroMode
                     if(!joystickHidden && indieGameEventsObject.touchInterface.domElements.joystick) {
                         indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = 'none';
@@ -1508,6 +1510,8 @@ var indieGameEvents = (function () {
                     }
                     _gn.end(); //stop if rotation rate and device orientation is not supported (fallback to touch buttons or joystick)
                 }
+
+                counter++;
             });
         });
 
