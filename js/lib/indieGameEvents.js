@@ -935,9 +935,9 @@ var indieGameEvents = (function () {
 
         if(_gamepadPolling) {
             _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
-            for(gamepadKey in _gamepads) {
-                if(_gamepads.hasOwnProperty(gamepadKey)){
-                    gamepad = _gamepads[gamepadKey];
+            //for(gamepadKey in _gamepads) {
+              //  if(_gamepads.hasOwnProperty(gamepadKey)){
+                    gamepad = _gamepads[0];   //only first gamepad will work
 
                     action1Triggered = false;
                     action2Triggered = false;
@@ -945,6 +945,8 @@ var indieGameEvents = (function () {
                     action4Triggered = false;
                     zoomTriggered = false;
                     rotateTriggered = false;
+                    leftRightTriggered = false;
+                    upDownTriggered = false;
 
                     if(gamepad && typeof(gamepad) === 'object') {
                         for (i = 0; i < gamepad.buttons.length; i++) {
@@ -985,29 +987,28 @@ var indieGameEvents = (function () {
                         if(gamepad.axes){
                             if (gamepad.mapping === 'standard') {
                                 for (i = 0; i < gamepad.axes.length; i++) {
-                                    leftRightTriggered = true;
-                                    upDownTriggered = true;
-
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
                                         standardGamepadAxisActions(i, canvas, events, gamepad.axes[i], indieGameEventsObject);
-                                    } else if(i === 0) {
-                                        leftRightTriggered = false;
-                                    } else if(i=== 1) {
-                                        upDownTriggered = false;
+
+                                        if (i === 0) {
+                                            leftRightTriggered = true;
+                                        } else if (i === 1) {
+                                            upDownTriggered = true;
+                                        }
                                     }
                                 }
                             } else { //not standard key mapping
                                 for (i = 0; i < gamepad.axes.length; i++) {
-                                    leftRightTriggered = true;
-                                    upDownTriggered = true;
 
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
                                         //map to non standard Thrustmaster Dual Analog 4
                                         nonStandardGamepadAxisActions(i, canvas, events, gamepad.axes[i], indieGameEventsObject);
-                                    } else if(i === 0 || i === 5 || i === 2) {
-                                        leftRightTriggered = false;
-                                    } else if(i=== 1 || i === 3 || i === 6) {
-                                        upDownTriggered = false;
+
+                                        if (i === 0 || i === 5 || i === 2) {
+                                            leftRightTriggered = true;
+                                        } else if (i === 1 || i === 3 || i === 6) {
+                                            upDownTriggered = true;
+                                        }
                                     }
                                 }
                             }
@@ -1021,6 +1022,8 @@ var indieGameEvents = (function () {
                                 indieGameEventsObject.eventStates["move-down"] = false;
                                 indieGameEventsObject.eventStates["move-up"] = false;
                             }
+
+
                             if(!action1Triggered) {
                                 indieGameEventsObject.eventStates["action-1"] = false;
                             }
@@ -1041,8 +1044,8 @@ var indieGameEvents = (function () {
                             }
                         }
                     }
-                }
-            }
+                //}
+            //}
 
             indieGameEventsObject.gamepad.pollingID = window.requestAnimationFrame(function () { pollGamepadEvents(canvas, indieGameEventsObject) });
         }
