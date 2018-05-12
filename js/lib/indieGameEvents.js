@@ -1,51 +1,58 @@
 "use strict";
 
-//OWN LIBRARY
+//OWN LIBRARY:
+/*****************/
+/*IndieGameEvents*/
+/*****************/
+
+//IIFE (JS - Module Pattern)
+//Main library Object
 var indieGameEvents = (function () {
-    //standard settings for the library
-    var _standardSettings,
-        //Add Hammer.js to library
-        _Hammer = Hammer,  /* hammer js */
-        _gamepads,
-        _gamepadAPI,        /* if the normal gamepad api is needed */
-        _webkitGamepadAPI,  /*if the webkit gamepad api is neddid */
-        _gamepadPolling,    /* if you are already polling for the gamepad Events*/
-        _gn,            /* gyronorm js normalises gyroscope values */
-        _gyroSettings,
-        _gyroCalibration,  /* calibration values for the gyroscope */
-        _openMenuAllowed,   /* do not trigger open menu every frame */
-        _openMapAllowed,   /* do not trigger open map every frame */
-        _dismissAllowed;  /* do not trigger dismiss every frame */
+
+    var _standardSettings,       /* standard settings for the library, they will be used when an setting is not stated in the register-function */
+        _Hammer = Hammer,        /* hammer js */
+        _gamepads,               /*in this variable there will be saved the connected gamepads */
+        _gamepadAPI,             /* if the normal gamepad api is needed */
+        _webkitGamepadAPI,       /*if the webkit gamepad api is needed */
+        _gamepadPolling,         /* if you are already polling for the gamepad Events*/
+        _gn,                     /* gyronorm js normalises gyroscope values */
+        _gyroSettings,           /* settings for the gyronorm API */
+        _gyroCalibration,        /* calibration values for the gyroscope */
+        _openMenuAllowed,        /* do not trigger open menu every frame */
+        _openMapAllowed,         /* do not trigger open map every frame */
+        _dismissAllowed;         /* do not trigger dismiss every frame */
 
 
     //sets the standard settings that will be overwritten with the settings object of the user
     _standardSettings = {
-        events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4'],
-        physicalInputs: ['keyboard', 'mouse', 'touch', 'controller'],
-        useWASDDirections: false,
-        useArrowDirections: true,
-        useEightTouchDirections: true,
-        touchDirectionController: 'joystick',                                                       //virtual joystick... buttons would also be an option
-        touchJoystickAccuracy: 'standard',                                                                        //when a joystick is used
-        touchDismissButton: true,                                                                   //if there should be a dismiss button when a menu is opened (only works when touch interface is active)
-        menuButton: true,                                                                            //if there should be a menu button (only works when touch interface is active and open-menu event is registered)
-        useGyroscope: false,                                                                            //TODO gyroscope mit anfangsmeldung wenn gyroscpe verwendet
-        useSpaceStrgAltShiftActions: true,                                                             //when true use the space for action 1, strg for action 2, alt for action 3 and shift for action 3 too         //else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l
-        enterAction1Key: false,                                                                          //to support remote controls better: adds the enter key to the action1 event         //to support remote controls better: adds the back key to the dismiss action
+        events: ['move-all', 'action-1', 'action-2', 'action-3', 'action-4'],                       /* values are available */
+        physicalInputs: ['keyboard', 'mouse', 'touch', 'controller'],                               /* all possible devices will be used */
+        useWASDDirections: false,                                                                   /* the W A S D keys will not be used for keyboard movement controls */
+        useArrowDirections: true,                                                                   /* use the arrow keyboard keys for the move-events */
+        useEightTouchDirections: true,                                                              /* all values are available */
+        touchDirectionController: 'joystick',                                                       /* a virtual joystick will be used for the touch overlay for the movement controls buttons would also be an option) */
+        touchJoystickAccuracy: 'standard',                                                          /* when a joystick is used, use the standard accuracy (smooth would also be an option) */
+        touchDismissButton: true,                                                                   /* there should be a dismiss button when a menu is opened (only works when touch interface is active) */
+        menuButton: true,                                                                           /* there should be a menu button (only works when touch interface is active and open-menu event is registered) */
+        useGyroscope: false,                                                                        /* by default dont use the gyroscope for the move-events (if activated no virtual move button or joystick will be awailable for touc */
+        useSpaceStrgAltShiftActions: true,                                                          /* true use the space key for action 1, strg for action 2, alt for action 3 and shift for action 4 - else the action keys on a keyboard are 1,2,3,4 numbers and h,j,k,l */
+        enterAction1Key: false,                                                                     /* to support remote controls better: adds the enter key to trigger the action1 event */
     };
 
     /*init of gyronorm.js*/
      _gn = new GyroNorm();
 
+    /* sets the settings for the gyronorm js api */
      _gyroSettings = {
-         frequency: 15,
-         gravityNormalized: true,
-         orientationBase:GyroNorm.GAME,
-         decimalCount:2,
-         screenAdjusted: true
+         frequency: 15,                 /* how often the data will be refreshed*/
+         gravityNormalized: true,       /* how often the data will be refreshed*/
+         orientationBase:GyroNorm.GAME, /* how the alpha values should be (based on absolute or relative values) */
+         decimalCount:2,                /* number accuracy */
+         screenAdjusted: true           /* if set to true it will return screen adjusted values.*/
      };
 
 
+     /* is used for the calibration of the gyroscope */
      _gyroCalibration = {
          calibrate: true,
          alpha: 0,
@@ -58,11 +65,16 @@ var indieGameEvents = (function () {
     _gamepadAPI = 'GamepadEvent' in window;
     _webkitGamepadAPI = 'WebKitGamepadEvent' in window;
 
+    /*----Main Initialisation API Function-----
+     * @param element: HTML5-Canvas element (no other is allowed)
+     * @param settings: a settings object to override the standard settings
+     * @returs: an object that represents the input abstraction for this element (can be used on other API functions to refer to the registered canvas and its abstraction
+     * */
 
-    function registerIndieGameEvents (element, settings) {             //only works on HTML5 Canvas Element, No use of Jquery (for bachelor compare select of jquery and select of vanilla javascript
+    function registerIndieGameEvents (element, settings) {
         var indieGameEventsObject;
-        //"this" is the canvasElement
 
+        //error handling
         if(!(element instanceof HTMLCanvasElement)) {
             throw new TypeError("IndieGameEvents: You can only register HTML5 Canvas Elements");
         }
@@ -82,7 +94,7 @@ var indieGameEvents = (function () {
 
         //sets the settings for the events (either standard settings or user settings when defined)
         indieGameEventsObject.settings = {
-            events: settings.events || _standardSettings.events,                                                        //TODO: determine that inputs are correct
+            events: settings.events || _standardSettings.events,
             physicalInputs: settings.physicalInputs || _standardSettings.physicalInputs,
             useWASDDirections: settings.useWASDDirections || _standardSettings.useWASDDirections,
             useArrowDirections: settings.useArrowDirections || _standardSettings.useArrowDirections,
@@ -98,22 +110,29 @@ var indieGameEvents = (function () {
 
         };
 
+        //refer in the abstraction object to the canvas element
         indieGameEventsObject.canvas = element;
 
-        indieGameEventsObject.hammer = new _Hammer(element, {preventDefault: true}); //registers Hammer.js for the canvas
-        indieGameEventsObject.hammer.get('pinch').set({ enable: true }); //enable pinch for touch zoom
-        indieGameEventsObject.hammer.get('rotate').set({ enable: true }); // enable rotate
+        //hammer js
+        indieGameEventsObject.hammer = new _Hammer(element, {preventDefault: true});    //registers Hammer.js for the canvas
+        indieGameEventsObject.hammer.get('pinch').set({ enable: true });                //enable pinch for touch zoom
+        indieGameEventsObject.hammer.get('rotate').set({ enable: true });               // enable rotate
 
+        //adds the event states array (used for the API function getEventState() to get an state of an event)
         indieGameEventsObject.eventStates = prepareEventStateArray();
 
         window.addEventListener('keyup', function(e) {keyboardUpEvents(e, indieGameEventsObject)});
 
-        eventTranslator(element, indieGameEventsObject);                                                              //main function, translates the physical events to the right events
+        //main function: translates the physical inputs to the abstracted events
+        eventTranslator(element, indieGameEventsObject);
 
-        //returns the API object that represents an element
+        //returns the API object that represents the abstraction
         return indieGameEventsObject;
     }
 
+    /*----API function to hide the touch overlay-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function hideIndieGameTouchInterface(indieGameEventsObject) {
         if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'none';
@@ -124,6 +143,9 @@ var indieGameEvents = (function () {
         }
     }
 
+    /*----API function to show the touch overlay-----
+     * @param indieGameEvents: an indie game events abstraction object (will be returned on the initialisation)
+     * */
     function showIndieGameTouchInterface (indieGameEventsObject) {
         if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'block';
@@ -133,7 +155,9 @@ var indieGameEvents = (function () {
             }
         }
     }
-
+    /*----API function to hide the touch overlay without the dismiss button if it is visible-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function hideIndieGameTouchInterfaceWithoutX (indieGameEventsObject) {
         if (indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             indieGameEventsObject.touchInterface.domElements.overlay.style.display = 'none';
@@ -144,6 +168,9 @@ var indieGameEvents = (function () {
         }
     }
 
+    /*----API function to show the touch dismiss button-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function showTouchDismissButton(indieGameEventsObject) {
         if (indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             if (indieGameEventsObject.touchInterface.domElements.dismissButton) {
@@ -152,6 +179,9 @@ var indieGameEvents = (function () {
         }
     }
 
+    /*----API function to toggle the touch interface-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function toggleTouchInterface(indieGameEventsObject) {
         if(indieGameEventsObject && indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.overlay) {
             if(indieGameEventsObject.touchInterface.domElements.overlay.style.display === 'none'){
@@ -162,38 +192,56 @@ var indieGameEvents = (function () {
         }
     }
 
+    /*----API function to hide the button for opening a map on the touch interface-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function hideTouchMapButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
             indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "none";
         }
     }
 
+    /*----API function to show the button for opening a map on the touch interface-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function showTouchMapButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.mapButton) {
             indieGameEventsObject.touchInterface.domElements.mapButton.style.display = "block";
         }
     }
 
+    /*----API function to hide the button for opening a menu on the touch interface-----
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function hideTouchMenuButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
             indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "none";
         }
     }
 
+    /*----API function to show the button for opening a menu on the touch interface----- */
+    /*@param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation) */
     function showTouchMenuButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.menuButton) {
             indieGameEventsObject.touchInterface.domElements.menuButton.style.display = "block";
         }
     }
 
+    /*----API function to hide the dismiss button on the touch interface----- */
+    /*@param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation) */
     function hideTouchDismissButton(indieGameEventsObject) {
         if(indieGameEventsObject.touchInterface && indieGameEventsObject.touchInterface.domElements && indieGameEventsObject.touchInterface.domElements.dismissButton) {
             indieGameEventsObject.touchInterface.domElements.dismissButton.style.display = "none";
         }
     }
 
-    //returns true (or the strenght or the zoom/scale factor) if an action is active (Button is pressed) can be used in an draw-Loop to poll event states, returns undifined if event is not recognized
-    //and false on inactive event states
+    /*----- API function to get an event state in an game draw loop -----*/
+    /* can be used in an draw-Loop to poll event states
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * @param event: the event for that information about its state is needed
+     * @returns true (or the strenght or the zoom/scale factor) if an action is active (Button is pressed), returns undifined if event is not recognized
+     * and false on inactive event states
+     *  */
     function getEventState(indieGameEventsObject, event) {
         if(indieGameEventsObject) {
             return indieGameEventsObject.eventStates[event];
@@ -203,7 +251,10 @@ var indieGameEvents = (function () {
     }
 
 
-    /*MAIN*/
+    /*----- The heart of the library, the main enty point: Abstracts inputs form different devices to uniformal events -----*/
+    /* @param canvas: an canvas element for that the input will be listened and the events will be dispatched
+     * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+     * */
     function eventTranslator(canvas, indieGameEventsObject) {
         var events = indieGameEventsObject.settings.events,
             physicalInput = indieGameEventsObject.settings.physicalInputs,
@@ -212,32 +263,12 @@ var indieGameEvents = (function () {
         indieGameEventsObject.oldBoundingRect = boundingRect;
 
 
-        /*directions*/
-        if (events.indexOf('move-all') !== -1) {                                                     //for directions (naming scheme with -)
-            registerMoveUp(indieGameEventsObject);
-            registerMoveDown(indieGameEventsObject);
-            registerMoveLeft(indieGameEventsObject);
-            registerMoveRight(indieGameEventsObject);
+        /*truns on directions in the abstraction object if needed*/
+        if (events.indexOf('move-all') !== -1 || events.indexOf('move-up') !== -1 || events.indexOf('move-down') !== -1 || events.indexOf('move-down') !== -1 || events.indexOf('move-left') !== -1 || events.indexOf('move-right') !== -1) {
+            indieGameEventsObject.directions = true;
         }
 
-        else {
-            if (events.indexOf('move-up') !== -1) {
-                registerMoveUp(indieGameEventsObject);
-            }
-
-            if (events.indexOf('move-down') !== -1) {
-                registerMoveDown(indieGameEventsObject);
-            }
-
-            if (events.indexOf('move-left') !== -1) {
-                registerMoveLeft(indieGameEventsObject);
-            }
-
-            if (events.indexOf('move-right') !== -1) {
-                registerMoveRight(indieGameEventsObject);
-            }
-        }
-
+        //zooming and rotating on touch
         if(events.indexOf('zoom') !== -1) {
             registerZoom(canvas, boundingRect, indieGameEventsObject);
         }
@@ -247,29 +278,29 @@ var indieGameEvents = (function () {
         }
 
 
-        //Gamepads
+        /* gamepads (poll gamepad states) */
         if((_gamepadAPI || _webkitGamepadAPI) && (physicalInput.indexOf('controller') !== -1 || physicalInput.indexOf('gamepad') !== -1)) {
             indieGameEventsObject.gamepad = {};
 
+            //gets the connected gamepads and polls the button of it (only the first connected gamepad)
             registerConnectionGamepadEvents(indieGameEventsObject);
 
-            //if there is already a gamepad in use
+            //if there is already a gamepad connected poll the buttons of it (only the first connected gamepad)
             if(isGamepadConnected()) {
                 getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
             }
         }
 
 
-        //keyboard
+        /* keyboard */
         if(physicalInput.indexOf('keyboard') !== -1) {
             registerKeyboardEvents(canvas, events, indieGameEventsObject);
         }
 
-        //if gyroscope mode is enabled
+        /* if gyroscope mode is enabled */
         if (indieGameEventsObject.settings.useGyroscope === true && isTouchDevice()) {
             registerGyroscope(canvas, indieGameEventsObject)
             //https://github.com/tomgco/gyro.js
-            //TODO register gyroscope (ACHTUNG funktioniert bei firefox und chrome anders deswegen gyronorm.js)
         }
 
         /* touch */
@@ -277,7 +308,7 @@ var indieGameEvents = (function () {
         if (!isGamepadConnected() && (physicalInput.indexOf('touch') !== -1 || physicalInput.contains('touchscreen')) && isTouchDevice()) {
             createTouchInterface(canvas, boundingRect, indieGameEventsObject);
 
-            //when it fullscreen is activated
+            //when fullscreen is activated
             document.addEventListener("fullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
             document.addEventListener("webkitfullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
             document.addEventListener("mozfullscreenchange", function() {touchInterfaceFullscreenHandler(indieGameEventsObject.touchInterface.domElements, canvas)});
@@ -290,7 +321,10 @@ var indieGameEvents = (function () {
         }
 
 
-        //handle window rezise event
+        /*----- Handles the window resize event for the touch overlay -----
+         * @param canvas: an canvas element for that the input will be listened and the events will be dispatched
+         * @param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
+         * */
         function handleResize(canvas, touchInterface) {
             var newBoundingRect = canvas.getBoundingClientRect(),
                 oldBoundingRect = indieGameEventsObject.oldBoundingRect,
@@ -309,10 +343,11 @@ var indieGameEvents = (function () {
                     }
                 }
 
-                //should be garbage collected
+                //remove old touch interface
                 document.body.removeChild(touchInterface.domElements.overlay);
                 delete canvas.touchInterface;
                 touchInterface = null;
+
                 //create new touch interface
                 createTouchInterface(canvas, newBoundingRect, indieGameEventsObject);
 
@@ -324,21 +359,27 @@ var indieGameEvents = (function () {
         }
 
 
-        //mouse events
+        /* mouse events */
         if(physicalInput.indexOf('mouse') !== -1) {
             registerMouseEvents(canvas, events, indieGameEventsObject.settings, indieGameEventsObject);
         }
 
 
+        /*not continuous events should not be piped down to the user under certain circumstances */
         setSinglePressEvents(canvas);
 
     }
-    
-    
-    //MOUSE
+
+
+    /*----- Translates the Mouse Events -----*/
+    //@param canvas: an canvas element for that the input will be listened and the events will be dispatched
+    //@param events: the user settings which events should be supported
+    //@param settings: user settings (or standard settings if option is not given by the user)
+    //@param indieGameEvents: an indie game events abstraction object that represents a canvas and its input abstraction (will be returned on the initialisation)
     function registerMouseEvents(canvas, events, settings, indieGameEventsObject) {
         var oldClientX = 0, clickPosition, data, eventDispatchID, point, wheeling;
 
+        //adds small point to enhance UI on rotation and move events via mouse (is visible when a mouse rotation or movement user-action is active)
         point = document.createElement("div");
         point.setAttribute("style",
             "position: absolute; " +
@@ -363,25 +404,32 @@ var indieGameEvents = (function () {
             });
         }
 
+        //rotate
         if (events.indexOf("rotate")) {
             canvas.addEventListener('mousedown', mouseDown, false);
             window.addEventListener('mouseup', mouseUp, false);
         }
 
+        /* Mouse up Handler: cancels running mouse events
+         * @param e: MouseEvent Object
+         */
         function mouseUp(e) {
             window.removeEventListener('mousemove', moveRotate, true);
 
             indieGameEventsObject.eventStates["rotate"] = false;
 
+            //only on middle mouse button
             if (e.which === 2) {
                 if (eventDispatchID) {
                     window.cancelAnimationFrame(eventDispatchID);
                     eventDispatchID = null;
                 }
 
+                //removes rotation point and the mouseMove Event Handler
                 removePoint();
                 window.removeEventListener('mousemove', moveMove, true);
 
+                //resets mouse movement event states
                 indieGameEventsObject.eventStates["move-up"] = false;
                 indieGameEventsObject.eventStates["move-left"] = false;
                 indieGameEventsObject.eventStates["move-down"] = false;
@@ -391,54 +439,72 @@ var indieGameEvents = (function () {
             canvas.style.cursor = "default";
         }
 
+        /* mousedown Handler
+         * @param e: MouseEvent Object
+         */
         function mouseDown(e) {
             clickPosition = {x: e.clientX, y: e.clientY};
             oldClientX = e.clientX;
+
+            //when mouse is down and moved then the moveRotate function will be executed
             window.addEventListener('mousemove', moveRotate, true);
 
             //middle mouse button
             if (e.which === 2) {
+                //makes a small point vsible for better UX
                 setPoint(clickPosition);
+                //when mouse is moved on the move events
                 window.addEventListener('mousemove', moveMove, true);
 
+                //dont execute the default event for the middle mouse button
                 return e.preventDefault();
             }
         }
 
+        /* Handler for mouse move on an rotation action
+         * @param e: MouseEvent Object
+         */
         function moveRotate(e) {
             var event, deltaX;
 
+            //only works if shift is pressed
             if (e.shiftKey) {
-                canvas.style.cursor = "e-resize";
-                deltaX = e.clientX - oldClientX;
+                canvas.style.cursor = "e-resize";       //change cursor style
+                deltaX = e.clientX - oldClientX;        //get the difference from the old mouse position (last frame) to the new mouse position (current frame)
 
-                event = new CustomEvent('rotate');
-                event.rotation = deltaX / 100;
+                event = new CustomEvent('rotate');      //creates a new Custom Event
+                event.rotation = deltaX / 100;          //sets the rotation value on the event object
 
-                indieGameEventsObject.eventStates["rotate"] = event.rotation;
+                indieGameEventsObject.eventStates["rotate"] = event.rotation; //refresehes the event states array with the new rotation value
 
-                canvas.dispatchEvent(event);
+                canvas.dispatchEvent(event);                //dispatches the event
             } else {
-                indieGameEventsObject.eventStates["rotate"] = false;
+                indieGameEventsObject.eventStates["rotate"] = false;        //resets the event states array (the specific user action is no longer active)
             }
-            oldClientX = e.clientX;
+            oldClientX = e.clientX;   //new position becomes old position
         }
 
+        /* Handler for mouse move on an move action
+         * @param e: MouseEvent Object
+         */
         function moveMove(e) {
             var distance, strength, angle;
 
-            distance = getDistance({x: e.clientX, y: e.clientY}, clickPosition);
-            strength = Math.min(~~distance.map(0, 400, 0, 100), 100);
-            angle = getAngle(clickPosition, {x: e.clientX, y: e.clientY});
+            distance = getDistance({x: e.clientX, y: e.clientY}, clickPosition);    //gets the distance from the mouse position when the event started
+            strength = Math.min(~~distance.map(0, 400, 0, 100), 100);               //calculates the strength out of the distance for the custom event out of the distance
+            angle = getAngle(clickPosition, {x: e.clientX, y: e.clientY});          //calculates the angle from the current point to the point now for a dampening effect on the dispatched event
 
+            //cancels the old AnimationFrame
             if (eventDispatchID) {
                 window.cancelAnimationFrame(eventDispatchID);
                 eventDispatchID = null;
             }
 
+            //Creates an Animation frame Loop for the mouse move actions (every frame an event will be dispatched)
             eventDispatchID = window.requestAnimationFrame(function() {moveLoop(distance, strength, angle)});
         }
-        
+
+        /* Sets an point (makes it visible) over the Canvas for better UX */
         function setPoint() {
             if(point) {
                 point.style.display = "block";
@@ -446,7 +512,8 @@ var indieGameEvents = (function () {
                 point.style.left = clickPosition.x + "px";
             }
         }
-        
+
+        /* Removes the point (makes it invisible) of that was set with the setPoint */
         function removePoint() {
             if(point) {
                 point.style.display = "none";
@@ -908,7 +975,7 @@ var indieGameEvents = (function () {
         }
     }
 
-    //https://github.com/luser/gamepadtest/blob/master/gamepadtest.js
+
     function registerConnectionGamepadEvents(indieGameEventsObject) {
         var canvas = indieGameEventsObject.canvas;
         if (_gamepadAPI) {
@@ -1098,7 +1165,6 @@ var indieGameEvents = (function () {
         }
 
         //todo knob 2 use for lookaround?
-        //knob two (try standard mapping)
         if(i === 2) { //left and right
             if(gamepadAxes < -0.1) {
                 event = new CustomEvent('move-left');
@@ -1302,14 +1368,14 @@ var indieGameEvents = (function () {
         if(events.indexOf('rotate') !== -1) {
             if(i === 6) {
                 event = new CustomEvent('rotate');
-                event.rotation = 0.1;
+                event.rotation = 0.2;
                 canvas.dispatchEvent(event);
 
                 indieGameEventsObject.eventStates["rotate"] = 0.1;
 
             } else if (i === 4) {
                 event = new CustomEvent('rotate');
-                event.rotation = -0.1;
+                event.rotation = -0.2;
                 canvas.dispatchEvent(event);
 
                 indieGameEventsObject.eventStates["rotate"] = -0.1;
@@ -1396,34 +1462,14 @@ var indieGameEvents = (function () {
         if(events.indexOf('rotate') !== -1) {
             if(i === 5) {
                 event = new CustomEvent('rotate');
-                event.rotation = 0.1;
+                event.rotation = 0.2;
                 canvas.dispatchEvent(event);
             } else if (i === 4) {
                 event = new CustomEvent('rotate');
-                event.rotation = -0.1;
+                event.rotation = -0.2;
                 canvas.dispatchEvent(event);
             }
         }
-    }
-
-    /*FOR THE DIRECTIONS*/
-    function registerMoveUp(indieGameEventsObject) {
-        indieGameEventsObject.directions = true;               //when at least one direction event is true the directions are set to true
-    }
-
-    function registerMoveDown(indieGameEventsObject) {
-        indieGameEventsObject.directions = true;
-
-    }
-
-    function registerMoveLeft(indieGameEventsObject) {
-        indieGameEventsObject.directions = true;
-
-    }
-
-    function registerMoveRight(indieGameEventsObject) {
-        indieGameEventsObject.directions = true;
-
     }
 
 
@@ -1446,11 +1492,6 @@ var indieGameEvents = (function () {
                 event.center = {x: e.center.x - boundingRect.left, y: e.center.y - boundingRect.top};
                 canvas.dispatchEvent(event);
         });
-
-        //TODO zoom on keyboard must be different then the native chrome and zoom
-        //TODO strg scroll
-        //TODO zoom buttons on touch interface?
-        //TODO bei tastatur scale wert ist +0.5 und -0.5
     }
 
     /* ROTATION */
@@ -1645,7 +1686,7 @@ var indieGameEvents = (function () {
             dom.joystick.innerCircle.className += 'joystick-inner-circle';
             dom.joystick.outerCircle.className += 'joystick-outer-circle';
 
-            setJoystickStyle(dom, joystickSize);                                                                      //TODO resize on rezise window and orientation change
+            setJoystickStyle(dom, joystickSize);
 
             //hide joystick at the beginning until no gyrosope is detected
             if(indieGameEventsObject.settings.useGyroscope) {
@@ -1963,9 +2004,6 @@ var indieGameEvents = (function () {
             }
         }
 
-        if(events.indexOf('zoom')) {
-            //TODO add + and - symbol
-        }
 
         dom.overlay.addEventListener("touchend", function (e) {
             e.preventDefault();
@@ -2190,7 +2228,7 @@ var indieGameEvents = (function () {
 
 
     function setTouchOverlayStyle(overlayRectSize, dom) {
-        //sets the style for the interface overlay                                                      //TODO on resize or orientationChange it also should work
+        //sets the style for the interface overlay
         dom.overlay.setAttribute("style",
             "width:" + overlayRectSize.width + "px; " +
             "height:" + overlayRectSize.height + "px; " +
@@ -2202,7 +2240,7 @@ var indieGameEvents = (function () {
         );
     }
 
-    function setJoystickStyle(dom, joystickSize) {                                                      //TODO add dynamic joystick
+    function setJoystickStyle(dom, joystickSize) {
         dom.joystick.wrapper.setAttribute("style",
             "position: absolute; " +
             "width:" + joystickSize + "px; " +
@@ -2313,8 +2351,6 @@ var indieGameEvents = (function () {
         if(indieGameEventsObject.settings.touchJoystickAccuracy === 'standard' || !indieGameEventsObject.settings.touchJoystickAccuracy) {
             if (distance > data.parentPosition.width / 9) {
                 angle = getAngle(data.midPoint, touchPoint);
-                console.log(angle);
-                console.log(strength);
 
                 if (angle < 67.5 && angle > -67.5 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
                     //console.log('right');
@@ -2573,7 +2609,7 @@ var indieGameEvents = (function () {
 
     /* HELPING FUNCTIONS */
     function isTouchDevice() {
-        return 'ontouchstart' in window;        //TODO sehen ob es funktioniert und referenz dafür im internet suchen wie das funktioniert vielleicht zu simpel?
+        return 'ontouchstart' in window;
     }
 
     //can you use pointer or ms pointer?
@@ -2647,8 +2683,6 @@ var indieGameEvents = (function () {
         return count;
     }
 
-    /*https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API*/
-
     /*Checks if at least one gamepad is connected*/
     function isGamepadConnected() {
         if (_gamepads) {
@@ -2680,7 +2714,7 @@ var indieGameEvents = (function () {
     };
 
 
-    /* rewrites the keyboard controller so you get rid of the delay @see (https://stackoverflow.com/questions/3691461/remove-key-press-delay-in-javascript)*/
+    /* rewrites the keyboard controller so you get rid of the delay */
     function KeyboardController(keys, eventStates, keyEventMap) {
         var timers, repeatAction;
 
@@ -2715,7 +2749,6 @@ var indieGameEvents = (function () {
 
         // When window is unfocused we may not get key events. To prevent this
         // causing a key to 'get stuck down', cancel all held keys
-        //
         window.onblur = function () {
             for (var key in timers) {
                 if (timers[key] !== null) {
@@ -2740,6 +2773,7 @@ var indieGameEvents = (function () {
 
     }
 
+    //returns the API functions of the library (to make them accessible in the global module)
     return {
         register: registerIndieGameEvents,
         showTouchInterface: showIndieGameTouchInterface,
@@ -2755,12 +2789,6 @@ var indieGameEvents = (function () {
 
 
 })();
-
-//TODO Browser compatibilität testen (vielleicht gibt es tester online?)
-//TODO nicht css pointer events vergessen bei den wrappern
-//TODO testen welche Gamepads funktionieren mit der standard mapping und welche nicht
-//TODO pfeiltasten und zweiten controller knopf für look direction verwenden (look-up, look-left, look-down, look-right, look-all) (Für FAZIT) und bei touch zweiten joystick generieren???
-//TODO add zoom buttons on touch interface
 
 /*Custom Events (IE support)*/
 (function () {
