@@ -520,13 +520,18 @@ var indieGameEvents = (function () {
             }
         }
 
-
+        /* Dispatches move events in every Animation frame (when the mouse action for moving is active)
+         * @param distance: Distance from the initial point (to calculate the strength)
+         * @param strength: Current strength of the event
+         * @param angle: Angle from the inital point (to dampen the strengtht)
+         */
         function moveLoop(distance, strength, angle) {
             var event, strengthDampen;
 
+            //smallest deviations dont trigger events
             if (distance > 10) {
+                //right
                 if (angle < 90 && angle > -90 && (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1)) {
-                    //console.log('right');
                     event = new CustomEvent('move-right');
 
                     //keep 100 strength for a time then fall off when angle is to low/high
@@ -541,6 +546,7 @@ var indieGameEvents = (function () {
                     indieGameEventsObject.eventStates["move-right"] = event.strength;
                 }
 
+                //down
                 if (angle < 180 && angle > 0 && (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1)) {
                     // console.log('down');
                     event = new CustomEvent('move-down');
@@ -557,6 +563,7 @@ var indieGameEvents = (function () {
                     indieGameEventsObject.eventStates["move-down"] = event.strength;
                 }
 
+                //left
                 if (((angle < -90 && angle < 0) || (angle > 0 && angle > 90)) && (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1)) {
                     event = new CustomEvent('move-left');
 
@@ -572,6 +579,7 @@ var indieGameEvents = (function () {
                     // console.log(angle);
                 }
 
+                //up
                 if (angle < 0 && angle > -180 && (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1)) {
                     //console.log('up');
                     event = new CustomEvent('move-up');
@@ -601,35 +609,52 @@ var indieGameEvents = (function () {
     }
 
 
-
-    function  translateMouseWheelAction(e, canvas, events, settings, indieGameEventsObject, wheeling) {
+    /* Translates actions triggered with the mouse wheel
+     * @param e: MouseEvent Object
+     * @param canvas: Current canvas element
+     * @param events: Array of events that should be translated
+     * @param settings: Settings active for this abstraction
+     * @param indieGameEventsObject: Object representing the abstraction
+     * @param wheeling: TimeoutID to reset the eventStates object
+     */
+    function translateMouseWheelAction(e, canvas, events, settings, indieGameEventsObject, wheeling) {
         var event;
 
-        //zooming is possible with alt and strg key
+        //zooming is possible with alt and strg  and shift key
         if(e.altKey || e.ctrlKey || e.shiftKey) {
             event = new CustomEvent('zoom');
-            event.scale = e.deltaY / -1000;
+            event.scale = e.deltaY / -1000;    //calculates scale value
 
             canvas.dispatchEvent(event);
 
             indieGameEventsObject.eventStates["zoom"] = event.scale;
 
+
+            //event states array should reset after 250ms after the last wheel action
+            //clears the timeout for the wheeling effect
             clearTimeout(wheeling);
+
+            //after 250 ms reset the event states array
             wheeling = setTimeout(function() {
                 indieGameEventsObject.eventStates["zoom"] = false;
                 wheeling = undefined;
             }, 250);
 
+            //prevents the default action
             e.preventDefault();
         }
     }
 
-    //Events that should not trigger every single frame change
+    /*
+     * Intercepts single Events (like open-map)
+     * @param canvas: current canvas element for that the abstraction should take place (only gets triggered every 750 ms)
+     */
     function setSinglePressEvents(canvas) {
         _openMapAllowed = true;
         _openMenuAllowed = true;
         _dismissAllowed = true;
 
+        /*open map*/
         canvas.addEventListener('open-map', function(e) {
             if(!_openMapAllowed) {
                 e.stopImmediatePropagation();
@@ -642,6 +667,7 @@ var indieGameEvents = (function () {
             }
         });
 
+        /*dismiss*/
         canvas.addEventListener('dismiss', function(e) {
             if(!_dismissAllowed) {
                 //stop event
@@ -655,6 +681,7 @@ var indieGameEvents = (function () {
             }
         });
 
+        /*open menu*/
         canvas.addEventListener('open-menu', function(e) {
             if(!_openMenuAllowed) {
                 //stop event
@@ -670,7 +697,12 @@ var indieGameEvents = (function () {
     }
 
 
-    /*KEYBOARD*/
+    /* KEYBOARD
+     * Translates Keyboard events
+     * @param canvas: current canvas
+     * @param events: events that should get translated
+     * @param indieGameEventsObject: abstraction object
+     */
     function registerKeyboardEvents(canvas, events, indieGameEventsObject) {
         var event, keyBoardEvents, keyMapping, keyEventMap;
 
@@ -678,11 +710,16 @@ var indieGameEvents = (function () {
         keyMapping = {};
         keyEventMap = {};
 
+        //creates a key mapping for for the keyboard events
+
+        //when useWASDDirections option is active us wasd keys
         if (indieGameEventsObject.settings.useWASDDirections) {
             keyMapping.left = 65;
             keyMapping.right = 68;
             keyMapping.down = 83;
             keyMapping.up = 87;
+
+        //else use arrow keys
         } else {
             keyMapping.left = 37;
             keyMapping.right = 39;
@@ -691,6 +728,7 @@ var indieGameEvents = (function () {
         }
 
         //action keys
+        //when useSpaceStrgAltShiftActions is active use that keys
         if(indieGameEventsObject.settings.useSpaceStrgAltShiftActions) {
             keyMapping.action1Space = 32;
             keyMapping.action2Strg = 17;
@@ -699,6 +737,7 @@ var indieGameEvents = (function () {
         }
 
 
+        //additionally when enterAction1Key is active use also the enter key for action1
         if(indieGameEventsObject.settings.enterAction1Key) {
             keyMapping.action1Enter = 13;
         }
@@ -722,7 +761,7 @@ var indieGameEvents = (function () {
         keyMapping.action4L = 76;
 
 
-        //basic remote control support
+        //basic remote control support (color keys on an remote control)
         keyMapping.action1R = 403;
         keyMapping.action2R = 404;
         keyMapping.action3R = 405;
@@ -767,7 +806,7 @@ var indieGameEvents = (function () {
         keyMapping.dismissES = 27;
 
 
-        //to get the key up right
+        //to get the key up right, sets the keyEvents for the keys in an separate array
         keyEventMap[keyMapping.left] = "move-left";
         keyEventMap[keyMapping.right] = "move-right";
         keyEventMap[keyMapping.up] = "move-up";
@@ -779,10 +818,11 @@ var indieGameEvents = (function () {
         keyEventMap[keyMapping.zoomInNP] = keyEventMap[keyMapping.zoomInL] = keyEventMap[keyMapping.zoomOutNP] = keyEventMap[keyMapping.zoomOutL] = keyEventMap[keyMapping.zoomInR] = keyEventMap[keyMapping.zoomOutR] = "zoom";
         keyEventMap[keyMapping.rotateLeftNP] =  keyEventMap[keyMapping.rotateLeftL] = keyEventMap[keyMapping.rotateRightNP] =  keyEventMap[keyMapping.rotateRightL] =  keyEventMap[keyMapping.rotateRightR] =keyEventMap[keyMapping.rotateLeftR]  = "rotate";
 
+        //adds the specific key dispatch function to the keyBoardEvents on the index place of the key code
         if (events.indexOf('move-all') !== -1 || events.indexOf('move-left') !== -1) {
             keyBoardEvents[keyMapping.left] = function () {              //left
                 event = new CustomEvent('move-left');
-                event.strength = 100;
+                event.strength = 100;                               //on keyboard the strength is always max
                 canvas.dispatchEvent(event);
 
                 indieGameEventsObject.eventStates['move-left'] = 100;
@@ -938,10 +978,16 @@ var indieGameEvents = (function () {
         // });
 
 
-
+        //registeres the Keyboard Controller (to get rid of the delay of the first received Event and the next one on held down keys)
         KeyboardController(keyBoardEvents, indieGameEventsObject.eventStates, keyEventMap);
     }
 
+    /*
+     * Adds the functionality to toggle the touchInterface when pressed F7
+     * (comes handy on devices with keyboards and touch to hide the touch- overlay when played with the keyboard)
+     * @param e: Keyboard Event
+     * @param indieGameEventsObject: Abstraction Object
+     */
     function keyboardUpEvents(e, indieGameEventsObject) {
         switch (e.keyCode) {
             case 118:
@@ -951,61 +997,99 @@ var indieGameEvents = (function () {
     }
 
     /*GAMEPAD */
+    /*
+     * Polls for connecting a keyboard and when one is found then it checks every frame the status of the input of that device
+     * only one gamepad is supported
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function getConnectedGamepadsAndPoll(canvas, indieGameEventsObject) {
         var gamepadKey, gamepad;
 
+        //gets the connected gamepads
         _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
 
+        //iterates over the gamepad list
         for (gamepadKey in _gamepads) {
             if (_gamepads.hasOwnProperty(gamepadKey) && _gamepads[gamepadKey]) {
                 gamepad = _gamepads[gamepadKey];
+
+                //warns if the used gamepad has no standard mapping
                 if (gamepad.mapping !== 'standard') {
                     console.warn('Gamepad with the id "'+ gamepad.id +'" has no standard key mapping and might not work properly');
                 }
             }
         }
 
-        //only poll gamepad events when they are available
+        //if a gamepad is connected put no action polling takes place
         if(isGamepadConnected() && !_gamepadPolling){
+            //action polling takes place (every frame the state of the controller will be checked and reacted to)
            _gamepadPolling = true;
+
+           //polls for the user action (checks the state of the first controller every frame
            pollGamepadEvents(canvas, indieGameEventsObject);
         }
+        //if no gamepads are connected set gamepad polling to falce
         else if(!isGamepadConnected() && _gamepadPolling) {
             _gamepadPolling = false;
         }
     }
 
 
+    /*
+     * Listen for gamepad connections and execute the gamepadConnectHandler that calls the getConnectedGamepadsAndPoll-Function
+     * to listen for user input of the controller (only the primary (first) connected one)
+     * @param indieGameEventsObject: abstraction object
+     */
     function registerConnectionGamepadEvents(indieGameEventsObject) {
         var canvas = indieGameEventsObject.canvas;
+
+        //if gamepad there that you can listen to when a gamepad is connected
         if (_gamepadAPI) {
             window.addEventListener("gamepadconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
             window.addEventListener("gamepaddisconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
         } else if (_webkitGamepadAPI) {
             window.addEventListener("webkitgamepadconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
             window.addEventListener("webkitgamepaddisconnected", function() {gamepadConnectHandler(canvas, indieGameEventsObject)});
+            //else just ask every 500 ms if a new gamepad is connected and execute the getConnectedGamepadsAndPoll-Function to poll for the user input
         } else {
             setInterval(function () {
                 getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
             }, 500);
         }
     }
-    
+
+    /*
+     * Gamepad connection handler: will be called when a new gamepad is connected
+     * calls getConnectedGamepadsAndPoll to listen to the gamepad actions
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function gamepadConnectHandler(canvas, indieGameEventsObject) {
         getConnectedGamepadsAndPoll(canvas, indieGameEventsObject);
     }
-    
+
+    /*
+     * Translates the first gamepad (primary gamepad) input actions to the uniform events
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function pollGamepadEvents(canvas, indieGameEventsObject) {
         var gamepadKey, gamepad, i, button, pressed, strength, events, leftRightTriggered, upDownTriggered, action1Triggered, action2Triggered, action3Triggered ,action4Triggered, zoomTriggered, rotateTriggered;
 
+        //gets user settings (or predefined settings)
         events = indieGameEventsObject.settings.events;
 
+        //if you should listen for the input user actions
         if(_gamepadPolling) {
             _gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads : []);
             //for(gamepadKey in _gamepads) {
               //  if(_gamepads.hasOwnProperty(gamepadKey)){
-                    gamepad = _gamepads[0];   //only first gamepad will work
 
+                     //only first gamepad is supported
+                    gamepad = _gamepads[0];
+
+                    //used for the eventStateArray to turn back the values to false when a gamepad button is released
                     action1Triggered = false;
                     action2Triggered = false;
                     action3Triggered = false;
@@ -1016,6 +1100,7 @@ var indieGameEvents = (function () {
                     upDownTriggered = false;
 
                     if(gamepad && typeof(gamepad) === 'object') {
+                        //iterate over every button and depending on that state dispatch an associated event or not
                         for (i = 0; i < gamepad.buttons.length; i++) {
                                 button = gamepad.buttons[i];
 
@@ -1032,6 +1117,7 @@ var indieGameEvents = (function () {
                             if(pressed && gamepad.mapping === 'standard'){
                                 standardGamepadButtonActions(i, canvas, events, indieGameEventsObject);
 
+                                //if  a certain action key is pressed then save it in an value
                                 if(i === 0) {action1Triggered = true;}
                                 else if(i === 2) {action2Triggered = true;}
                                 else if(i === 1) {action3Triggered = true;}
@@ -1039,7 +1125,8 @@ var indieGameEvents = (function () {
                                 else if(i === 11 || i === 10) {zoomTriggered = true;}
                                 else if(i === 5 || i === 4) {rotateTriggered = true;}
 
-                            } else if (pressed) {                                 //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
+                                //oh oh not good (non standard) will be mapped for the thrustmaster dual analog 4
+                            } else if (pressed) {
                                 nonStandardGamepadButtonActions(i, canvas, events, indieGameEventsObject);
 
                                 if(i === 0) {action1Triggered = true;}
@@ -1049,10 +1136,13 @@ var indieGameEvents = (function () {
                                 else if(i === 11 || i === 10) {zoomTriggered = true;}
                                 else if(i === 6 || i === 4) {rotateTriggered = true;}
                             }
-                        }
+                        } //endfor
 
+                        //if there are axes on the gamepad
                         if(gamepad.axes){
+                            //standard mapping
                             if (gamepad.mapping === 'standard') {
+                                //iterates over every joystick and axis and check their state (to trigger specific events or not)
                                 for (i = 0; i < gamepad.axes.length; i++) {
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
                                         standardGamepadAxisActions(i, canvas, events, gamepad.axes[i], indieGameEventsObject);
@@ -1064,7 +1154,8 @@ var indieGameEvents = (function () {
                                         }
                                     }
                                 }
-                            } else { //not standard key mapping
+                                //not standard mapping (use thrustmaster dual analog 4 mapping)
+                            } else {
                                 for (i = 0; i < gamepad.axes.length; i++) {
 
                                     if ((gamepad.axes[i] > 0.1 || gamepad.axes[i] < -0.1) && (gamepad.axes[i] <= 1 && gamepad.axes[i] >= -1)) {
@@ -1080,6 +1171,7 @@ var indieGameEvents = (function () {
                                 }
                             }
 
+                            //if a specific button was released or the axis movement is inactive (for an specific event) than reset the action array entry for that event
                             if(!leftRightTriggered) {
                                 indieGameEventsObject.eventStates["move-right"] = false;
                                 indieGameEventsObject.eventStates["move-left"] = false;
@@ -1114,25 +1206,34 @@ var indieGameEvents = (function () {
                 //}
             //}
 
+            //poll the gamepad button and axis states for every frame
             indieGameEventsObject.gamepad.pollingID = window.requestAnimationFrame(function () { pollGamepadEvents(canvas, indieGameEventsObject) });
         }
+        //if you should not poll the gamepad events stop the requestAnimationFrame-Loop
         else {
             window.cancelAnimationFrame(indieGameEventsObject.gamepad.pollingID);
         }
 
     }
 
-
+    /*
+     * Translates the user actions from the joysticks to uniform evens with the gamepad mapping of an non standard gamepad (thrustmaster dual analog 4)
+     * @param i: index value uf the axis from the mapping
+     * @param canvas: current canvas
+     * @param axis value for that specific joystick axis
+     * @param indieGameEventsObject: abstraction object
+     */
     function nonStandardGamepadAxisActions(i, canvas, events, gamepadAxes, indieGameEventsObject) {
         var event;
 
-        //knob one
+        //only left knob supported (so no double dispatching two events in one frame is possible)
         if(i === 0) { //left and right
             if(gamepadAxes < -0.1) { //0.1 for tolearance
                 event = new CustomEvent('move-left');
-                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100); //calculates the strength (maps it from 0-1 what we get from the gamepad to 0 - 100 to make it uniformal with other input methods)
                 canvas.dispatchEvent(event);
 
+                //to get the event states array right (if you move left it is impossible to move right so turn of that eventState)
                 indieGameEventsObject.eventStates["move-right"] = false;
                 indieGameEventsObject.eventStates["move-left"] = event.strength;
 
@@ -1164,93 +1265,97 @@ var indieGameEvents = (function () {
             }
         }
 
-        //todo knob 2 use for lookaround?
-        if(i === 2) { //left and right
-            if(gamepadAxes < -0.1) {
-                event = new CustomEvent('move-left');
-                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-right"] = false;
-                indieGameEventsObject.eventStates["move-left"] = event.strength;
-
-            } else if(gamepadAxes > 0.1) {
-                event = new CustomEvent('move-right');
-                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-left"] = false;
-                indieGameEventsObject.eventStates["move-right"] = event.strength;
-            }
-        }
-
-        if(i === 3) { //up and down
-            if(gamepadAxes < -0.1) {
-                event = new CustomEvent('move-up');
-                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-down"] = false;
-                indieGameEventsObject.eventStates["move-up"] = event.strength;
-
-            } else if(gamepadAxes > 0.1) {
-                event = new CustomEvent('move-down');
-                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-up"] = false;
-                indieGameEventsObject.eventStates["move-down"] = event.strength;
-            }
-        }
-
-        //knob three (non standard thrustmaster mapping)
-        if(i === 5) { //left and right
-            if(gamepadAxes < -0.1) {
-                event = new CustomEvent('move-left');
-                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-right"] = false;
-                indieGameEventsObject.eventStates["move-left"] = event.strength;
-
-            } else if(gamepadAxes > 0.1) {
-                event = new CustomEvent('move-right');
-                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-left"] = false;
-                indieGameEventsObject.eventStates["move-right"] = event.strength;
-            }
-        }
-
-        if(i === 6) { //up and down
-            if(gamepadAxes < -0.1) {
-                event = new CustomEvent('move-up');
-                event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-down"] = false;
-                indieGameEventsObject.eventStates["move-up"] = event.strength;
-
-            } else if(gamepadAxes > 0.1) {
-                event = new CustomEvent('move-down');
-                event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
-                canvas.dispatchEvent(event);
-
-                indieGameEventsObject.eventStates["move-up"] = false;
-                indieGameEventsObject.eventStates["move-down"] = event.strength;
-            }
-        }
-
+        //Only one joystick will be supported
+        // if(i === 2) { //left and right
+        //     if(gamepadAxes < -0.1) {
+        //         event = new CustomEvent('move-left');
+        //         event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-right"] = false;
+        //         indieGameEventsObject.eventStates["move-left"] = event.strength;
+        //
+        //     } else if(gamepadAxes > 0.1) {
+        //         event = new CustomEvent('move-right');
+        //         event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-left"] = false;
+        //         indieGameEventsObject.eventStates["move-right"] = event.strength;
+        //     }
+        // }
+        //
+        // if(i === 3) { //up and down
+        //     if(gamepadAxes < -0.1) {
+        //         event = new CustomEvent('move-up');
+        //         event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-down"] = false;
+        //         indieGameEventsObject.eventStates["move-up"] = event.strength;
+        //
+        //     } else if(gamepadAxes > 0.1) {
+        //         event = new CustomEvent('move-down');
+        //         event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-up"] = false;
+        //         indieGameEventsObject.eventStates["move-down"] = event.strength;
+        //     }
+        // }
 
         //knob three (non standard thrustmaster mapping)
+        // if(i === 5) { //left and right
+        //     if(gamepadAxes < -0.1) {
+        //         event = new CustomEvent('move-left');
+        //         event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-right"] = false;
+        //         indieGameEventsObject.eventStates["move-left"] = event.strength;
+        //
+        //     } else if(gamepadAxes > 0.1) {
+        //         event = new CustomEvent('move-right');
+        //         event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-left"] = false;
+        //         indieGameEventsObject.eventStates["move-right"] = event.strength;
+        //     }
+        // }
+        //
+        // if(i === 6) { //up and down
+        //     if(gamepadAxes < -0.1) {
+        //         event = new CustomEvent('move-up');
+        //         event.strength = gamepadAxes.map(-0.1 , -1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-down"] = false;
+        //         indieGameEventsObject.eventStates["move-up"] = event.strength;
+        //
+        //     } else if(gamepadAxes > 0.1) {
+        //         event = new CustomEvent('move-down');
+        //         event.strength = gamepadAxes.map(0.1 , 1 , 0, 100);
+        //         canvas.dispatchEvent(event);
+        //
+        //         indieGameEventsObject.eventStates["move-up"] = false;
+        //         indieGameEventsObject.eventStates["move-down"] = event.strength;
+        //     }
+        // }
 
     }
 
+    /*
+    * Translates the user actions from the joysticks to uniform events with the w3c standard gamepad mapping
+    * @param i: index value uf the axis from the mapping
+    * @param canvas: current canvas
+    * @param axis value for that specific joystick axis
+    * @param indieGameEventsObject: abstraction object
+    */
     function standardGamepadAxisActions(i, canvas, events, gamepadAxes, indieGameEventsObject) {
         var event;
 
-        //knob one
+        //knob one (only left knob supported)
         if(i === 0) { //left and right
             if(gamepadAxes < -0.1) {
                 event = new CustomEvent('move-left');
@@ -1289,28 +1394,40 @@ var indieGameEvents = (function () {
 
     }
 
+    /*
+    * Translates the user actions from the controller buttons to uniform events with the gamepad mapping of an non standard gamepad (thrustmaster dual analog 4)
+    * @param i: index value uf the axis from the mapping
+    * @param canvas: current canvas
+    * @param events: registered events
+    * @param indieGameEventsObject: abstraction object
+    */
     function nonStandardGamepadButtonActions(i, canvas, events, indieGameEventsObject) {
         var event;
 
         // console.log('nonstandard ' + (i + 1));
+        //action keys
+        //action one
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
-            indieGameEventsObject.eventStates["action-1"] = true;
+            indieGameEventsObject.eventStates["action-1"] = true; //sets events state array on action place to true (no relevant information for action keys)
         }
 
+        //action two
         if (events.indexOf('action-2') !== -1 && i === 1) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
             indieGameEventsObject.eventStates["action-2"] = true;
         }
 
+        //action three
         if (events.indexOf('action-3') !== -1 && i === 2) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
             indieGameEventsObject.eventStates["action-3"] = true;
         }
 
+        //action four
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
@@ -1319,7 +1436,7 @@ var indieGameEvents = (function () {
 
 
 
-
+        //use back button for dismiss
         if(events.indexOf('dismiss') !== -1 && i === 8) {
             event = new CustomEvent('dismiss');
             canvas.dispatchEvent(event);
@@ -1329,6 +1446,7 @@ var indieGameEvents = (function () {
             hideTouchDismissButton(indieGameEventsObject);
         }
 
+        //use menu button for opening a menu
         if(events.indexOf('open-menu') !== -1 && i === 9) {
             event = new CustomEvent('open-menu');
             canvas.dispatchEvent(event);
@@ -1339,7 +1457,9 @@ var indieGameEvents = (function () {
             showTouchDismissButton(indieGameEventsObject);
         }
 
+        //use the left trigger button to open the map
         if(events.indexOf('open-map') !== -1 && i === 5) {
+            console.log(i);
             event = new CustomEvent('open-map');
             canvas.dispatchEvent(event);
 
@@ -1348,63 +1468,76 @@ var indieGameEvents = (function () {
         }
 
 
-
+        //use the joystick buttons for zooming (left + and right -)
         if(events.indexOf('zoom') !== -1) {
             if(i === 11) {
                 event = new CustomEvent('zoom');
-                event.scale = 0.1;
+                event.scale = 0.1;                              //zoom factor
                 canvas.dispatchEvent(event);
 
                 indieGameEventsObject.eventStates["zoom"] = 0.1;
             } else if (i === 10) {
                 event = new CustomEvent('zoom');
-                event.scale = -0.1;
+                event.scale = -0.1;                             //zoom factor
                 canvas.dispatchEvent(event);
 
                 indieGameEventsObject.eventStates["zoom"] = -0.1;
             }
         }
 
+        //use "R1" and "L1" for rotating
         if(events.indexOf('rotate') !== -1) {
             if(i === 6) {
                 event = new CustomEvent('rotate');
-                event.rotation = 0.2;
+                event.rotation = 0.2;                           //rotation angle
                 canvas.dispatchEvent(event);
 
-                indieGameEventsObject.eventStates["rotate"] = 0.1;
+                indieGameEventsObject.eventStates["rotate"] = 0.2;
 
             } else if (i === 4) {
                 event = new CustomEvent('rotate');
-                event.rotation = -0.2;
+                event.rotation = -0.2;                              //rotation angle
                 canvas.dispatchEvent(event);
 
-                indieGameEventsObject.eventStates["rotate"] = -0.1;
+                indieGameEventsObject.eventStates["rotate"] = -0.2;
             }
         }
     }
 
+    /*
+    * Translates the user actions from the controller buttons to uniform events with the w3c standard gamepad mapping
+    * @param i: index value uf the axis from the mapping
+    * @param canvas: current canvas
+    * @param events: registered events
+    * @param indieGameEventsObject: abstraction object
+    */
     function standardGamepadButtonActions(i, canvas, events, indieGameEventsObject) {
         var event;
 
         // console.log('nonstandard ' + (i + 1));
+        //action keys
+        //action one
         if (events.indexOf('action-1') !== -1 && i === 0) {
             event = new CustomEvent('action-1');
             canvas.dispatchEvent(event);
             indieGameEventsObject.eventStates["action-1"] = true;
         }
 
+        //action two
         if (events.indexOf('action-2') !== -1 && i === 2) {
             event = new CustomEvent('action-2');
             canvas.dispatchEvent(event);
             indieGameEventsObject.eventStates["action-2"] = true;
         }
 
+        //action three
         if (events.indexOf('action-3') !== -1 && i === 1) {
             event = new CustomEvent('action-3');
             canvas.dispatchEvent(event);
             indieGameEventsObject.eventStates["action-3"] = true;
         }
 
+        //action four
         if (events.indexOf('action-4') !== -1 && i === 3) {
             event = new CustomEvent('action-4');
             canvas.dispatchEvent(event);
@@ -1413,7 +1546,7 @@ var indieGameEvents = (function () {
 
 
 
-
+        //dismiss on back button
         if(events.indexOf('dismiss') !== -1 && i === 8) {
             event = new CustomEvent('dismiss');
             canvas.dispatchEvent(event);
@@ -1423,6 +1556,7 @@ var indieGameEvents = (function () {
             hideTouchDismissButton(indieGameEventsObject);
         }
 
+        //open menu with the manu button
         if(events.indexOf('open-menu') !== -1 && i === 9) {
             event = new CustomEvent('open-menu');
             canvas.dispatchEvent(event);
@@ -1433,6 +1567,7 @@ var indieGameEvents = (function () {
             showTouchDismissButton(indieGameEventsObject);
         }
 
+        //open map with the left arrow key of the gamepad direction buttons
         if(events.indexOf('open-map') !== -1 && i === 14) {
             event = new CustomEvent('open-map');
             canvas.dispatchEvent(event);
@@ -1442,7 +1577,7 @@ var indieGameEvents = (function () {
         }
 
 
-
+        //zoom with the joystick buttons
         if(events.indexOf('zoom') !== -1) {
             if(i === 11) {
                 event = new CustomEvent('zoom');
@@ -1459,25 +1594,35 @@ var indieGameEvents = (function () {
             }
         }
 
+        //use "R1" and "L1" for rotating
         if(events.indexOf('rotate') !== -1) {
             if(i === 5) {
                 event = new CustomEvent('rotate');
                 event.rotation = 0.2;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["rotate"] = -0.2;
             } else if (i === 4) {
                 event = new CustomEvent('rotate');
                 event.rotation = -0.2;
                 canvas.dispatchEvent(event);
+
+                indieGameEventsObject.eventStates["rotate"] = -0.2;
             }
         }
     }
 
 
     /* ZOOMING */
+  /* Registeres the zooming actions with multitouch and creates uniformal events out of it
+  * @param canvas: current canvas
+  * @param boundingRect: bounding rectangle object of the canvas
+  * @param indieGameEventsObject: abstraction object
+  */
     function registerZoom(canvas, boundingRect, indieGameEventsObject) {
-        var hammer = indieGameEventsObject.hammer,
-            event,
-            lastScale;
+        var hammer = indieGameEventsObject.hammer,  //gets the hammer object from the abstraction object
+            event,                                  //event that will be dispatched
+            lastScale;                              //scale value of the last scale
 
         event = new CustomEvent('zoom');
 
@@ -1495,6 +1640,11 @@ var indieGameEvents = (function () {
     }
 
     /* ROTATION */
+    /* Registers the rotating actions with multitouch and creates uniformal events out of it
+    * @param canvas: current canvas
+    * @param boundingRect: bounding rectangle object of the canvas
+    * @param indieGameEventsObject: abstraction object
+    */
     function registerRotate(canvas, boundingRect, indieGameEventsObject) {
         var hammer = indieGameEventsObject.hammer,
             event,
@@ -1508,7 +1658,7 @@ var indieGameEvents = (function () {
         });
 
         hammer.on('rotatemove', function (e) {
-            event.rotation = (e.rotation - lastRotation);               //relative rotation value
+            event.rotation = (e.rotation - lastRotation);               //relative rotation value from the last frame to the current frame
             lastRotation = e.rotation;
             canvas.dispatchEvent(event);
         });
@@ -1516,13 +1666,21 @@ var indieGameEvents = (function () {
 
 
     /*GYROSCOPE*/
+    /* Registeres the gyroscope movement actions when they are set active by the user
+   * @param canvas: current canvas
+   * @param indieGameEventsObject: abstraction object
+   */
     function registerGyroscope(canvas, indieGameEventsObject) {
         var joystickHidden = true, buttonsHidden = true, counter; //joysticks are hidden on standard and showed when device orientation and rotation rate is not supported
 
+        //asks a couple of times if a gyroscope is available (sometimes it takes a while to recognize the gyroscope)
         counter = 0;
 
+        //uses gyronorm with the gyroSettings
         _gn.init(_gyroSettings).then(function() {
+            //starts the gyroscope data polling
             _gn.start(function(data){
+                //gets the current orientation of the device
                 var orientation = screen.orientation.type || screen.mozOrientation.type || screen.msOrientation.type;
 
                 //hides gamepad or direction buttons when gyroscope is detected (rotation of gyroscope and the device orientation)
@@ -1539,15 +1697,17 @@ var indieGameEvents = (function () {
                         buttonsHidden = true;
                     }
 
+                    //starts to interprete the gyroscope data and translate it to uniformal events
                    translateGyroscopeValues(data, canvas, orientation, indieGameEventsObject);
 
+                    //else show the virtual joystick
                 } else if (indieGameEventsObject.touchInterface){
                     if(joystickHidden && indieGameEventsObject.touchInterface.domElements.joystick) {
                         indieGameEventsObject.touchInterface.domElements.joystick.wrapper.style.display = 'block';
                         joystickHidden = false;
                     }
 
-                    //same for direction buttons
+                    //or direction buttons
                     else if(buttonsHidden && indieGameEventsObject.touchInterface.domElements.directionButtons) {
                         indieGameEventsObject.touchInterface.domElements.directionButtons.wrapper.style.display = 'block';
                         buttonsHidden = false;
@@ -1559,10 +1719,16 @@ var indieGameEvents = (function () {
             });
         });
 
+        //initialize the current direction as initial rotation
         _gn.setHeadDirection()
     }
 
-
+    /* Translates the gyroscope data to uniformal events and prepares the data for the events
+    * @param data: gyroscope data
+   * @param canvas: current canvas
+   * @param orientation: current orientation of the device
+   * @param indieGameEventsObject: abstraction object
+   */
     function translateGyroscopeValues(data, canvas, orientation, indieGameEventsObject) {
         var alpha, beta, gamma, event;
 
@@ -1575,27 +1741,30 @@ var indieGameEvents = (function () {
             //console.log('calibrate');
         }
 
-
+            //gets the calibrated gyroscope values
             alpha = data.do.alpha - _gyroCalibration.alpha;
             beta = data.do.beta - _gyroCalibration.beta;
             gamma = data.do.gamma - _gyroCalibration.gamma;
 
 
-        //console.log(gamma);
-
+        //use gamma and beta to interpret as movement actions
+        //gamma between -10deg (smallest changes dont trigger a movement) and -90deg -> move left
         if (gamma < -10 && gamma > -90) {
             event = new CustomEvent('move-left');
             //better mapping for the strenght of the gyroscope
             if(gamma > -30) {
-                event.strength = gamma.map(-10, -30, 0, 100);
+                event.strength = gamma.map(-10, -30, 0, 100);           //gets the strength (on small tilt (unitil -30deg) there is an gradation
             } else {
-                event.strength = 100;
+                event.strength = 100;                                      //else use the full strength
             }
             canvas.dispatchEvent(event);
 
+            //if you are moving left it is impossible to move right
             indieGameEventsObject.eventStates['move-right'] = false;
             indieGameEventsObject.eventStates['move-left'] = event.strength;
         }
+
+        //move right
         else if (gamma > 10 && gamma < 90) {
             event = new CustomEvent('move-right');
 
@@ -1610,15 +1779,15 @@ var indieGameEvents = (function () {
             indieGameEventsObject.eventStates['move-left'] = false;
             indieGameEventsObject.eventStates['move-right'] = event.strength;
         }
+        //if you are not moving left, reset the event state array
         else {
             indieGameEventsObject.eventStates['move-right'] = false;
             indieGameEventsObject.eventStates['move-left'] = false;
         }
 
+        //move up
         if (beta < -10 && beta > -90) {
             event = new CustomEvent('move-up');
-
-            //console.log(beta);
 
             if(beta > -30) {
                 event.strength = beta.map(-10, -30, 0, 100);
@@ -1631,6 +1800,8 @@ var indieGameEvents = (function () {
             indieGameEventsObject.eventStates['move-down'] = false;
             indieGameEventsObject.eventStates['move-up'] = event.strength;
         }
+
+        //move down
         else if (beta > 10 && beta < 90) {
             event = new CustomEvent('move-down');
 
@@ -1640,7 +1811,6 @@ var indieGameEvents = (function () {
                 event.strength = 100;
             }
 
-            //console.log(event.strength);
 
             canvas.dispatchEvent(event);
 
@@ -1657,20 +1827,27 @@ var indieGameEvents = (function () {
 
 
     /*THE TOUCH INTERFACE*/
-    function createTouchInterface(canvas, boundingRect, indieGameEventsObject) {                                                                 //Touch interface will be overlaid over the canvas
-        var smallestJoystickValue = 100,    //min and max values so the touchpad isnt to big or small
+    /* Creates the touch interface when the user set touch active and touch is recognized
+   * @param canvas: current canvas
+   * @param boundingRect: bounding rectangle of the current canvas
+   * @param indieGameEventsObject: abstraction object
+   */
+    function createTouchInterface(canvas, boundingRect, indieGameEventsObject) {            //Touch interface will be overlaid over the canvas
+        var smallestJoystickValue = 100,                                                    //min and max values so the touchpad isnt to big or small
             highestJoystickValue = 350,
             overlayRectSize = boundingRect,                                                //gets the correct overlayRect position and size;
             events = indieGameEventsObject.settings.events;
 
-        /*object for the touch interface*/
+        /*object for the touch interface is saved in the abstraction object*/
         indieGameEventsObject.touchInterface = {};
         var dom = indieGameEventsObject.touchInterface.domElements = {};
 
+        //creates the touch interface (div)
         dom.overlay = document.createElement('div');
         dom.overlay.className += 'touchInterface';
 
-        setTouchOverlayStyle(overlayRectSize, dom);                                                          //to position the overlay
+        //sets the css style for the overlay for positioning
+        setTouchOverlayStyle(overlayRectSize, dom);
 
         /*if we use a joystick for the arrow directions and at least one direction event is enabled */
         if (indieGameEventsObject.settings.touchDirectionController === 'joystick' && indieGameEventsObject.directions) {
@@ -1686,6 +1863,7 @@ var indieGameEvents = (function () {
             dom.joystick.innerCircle.className += 'joystick-inner-circle';
             dom.joystick.outerCircle.className += 'joystick-outer-circle';
 
+            //sets the style for the joystich
             setJoystickStyle(dom, joystickSize);
 
             //hide joystick at the beginning until no gyrosope is detected
@@ -1693,8 +1871,10 @@ var indieGameEvents = (function () {
                 dom.joystick.wrapper.style.display = 'none';
             }
 
+            //sticks everything together in the dom
             dom.overlay.appendChild(dom.joystick.wrapper).appendChild(dom.joystick.outerCircle).parentNode.appendChild(dom.joystick.innerCircle);                           //appends the joystick to the overlay
 
+            //start interpreting the user interactions and translates them to uniformal events (uses pointer and touch api)
             if (isTouchDevice()) {
                 dom.joystick.wrapper.addEventListener('touchstart', function (e) {
                     joystickTouchStartAction(e, canvas, indieGameEventsObject);
@@ -1728,43 +1908,52 @@ var indieGameEvents = (function () {
             }
         }
 
-        /* if we use buttons for the touch movements */
+        /* if we use virtual buttons for the touch movements */
         else if ((indieGameEventsObject.settings.touchDirectionController === 'buttons' || indieGameEventsObject.settings.touchDirectionController === 'button' ) && indieGameEventsObject.directions) {
             var directionButtonSize, smallestDirectionButtonsSize = 75, highestDirectionButtonSize = 130,
                 directionButtonMargin = 2, buttonEvents;
 
+            //buttons should not be to big or to small
             directionButtonSize = Math.min(Math.max(smallestDirectionButtonsSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestDirectionButtonSize);
 
+
             dom.directionButtons = {};
+
+            //creates a wrapper object for the buttons
             dom.directionButtons.wrapper = document.createElement('div');
+
+            //creates the buttons (only if user set the corresponding events active
+            //move up
             if (events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.up = document.createElement('button');
-                dom.directionButtons.up.innerHTML = "🡹";
+                dom.directionButtons.up.innerHTML = "🡹";                                            //to know which direction will be used for the button (for the user)
                 dom.directionButtons.up.name += dom.directionButtons.up.className += 'up-button';
-                dom.directionButtons.wrapper.appendChild(dom.directionButtons.up);
+                dom.directionButtons.wrapper.appendChild(dom.directionButtons.up);                  //appends the button to the wrapper
             }
+            //move down
             if (events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.down = document.createElement('button');
                 dom.directionButtons.down.innerHTML = "🡻";
                 dom.directionButtons.down.name += dom.directionButtons.down.className += 'down-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.down);
             }
-
+            //move left
             if (events.indexOf('move-left') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.left = document.createElement('button');
                 dom.directionButtons.left.innerHTML = "🡸";
                 dom.directionButtons.left.name += dom.directionButtons.left.className += 'left-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.left);
             }
-
+            //move right
             if (events.indexOf('move-right') !== -1 || events.indexOf('move-all') !== -1) {
                 dom.directionButtons.right = document.createElement('button');
                 dom.directionButtons.right.innerHTML = "🡺";
                 dom.directionButtons.right.name += dom.directionButtons.right.className += 'right-button';
                 dom.directionButtons.wrapper.appendChild(dom.directionButtons.right);
             }
-
+            //if also directional buttons are needed (set active in the settings) and the corresponding events are active then create them
             if (indieGameEventsObject.settings.useEightTouchDirections) {
+                //up left
                 if (events.indexOf('move-left') !== -1 && events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                     dom.directionButtons.leftup = document.createElement('button');
                     dom.directionButtons.leftup.innerHTML = "🡼";
@@ -1772,6 +1961,7 @@ var indieGameEvents = (function () {
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.leftup);
                 }
 
+                //right down
                 if (events.indexOf('move-right') !== -1 && events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1) {
                     dom.directionButtons.rightdown = document.createElement('button');
                     dom.directionButtons.rightdown.innerHTML = "🡾";
@@ -1779,6 +1969,7 @@ var indieGameEvents = (function () {
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightdown);
                 }
 
+                //right up
                 if (events.indexOf('move-right') !== -1 && events.indexOf('move-up') !== -1 || events.indexOf('move-all') !== -1) {
                     dom.directionButtons.rightup = document.createElement('button');
                     dom.directionButtons.rightup.innerHTML = "🡽";
@@ -1786,6 +1977,7 @@ var indieGameEvents = (function () {
                     dom.directionButtons.wrapper.appendChild(dom.directionButtons.rightup);
                 }
 
+                //left down
                 if (events.indexOf('move-left') !== -1 && events.indexOf('move-down') !== -1 || events.indexOf('move-all') !== -1) {
                     dom.directionButtons.leftdown = document.createElement('button');
                     dom.directionButtons.leftdown.innerHTML = "🡿";
@@ -1794,6 +1986,7 @@ var indieGameEvents = (function () {
                 }
             }
 
+            //which button corresponds to which event(s) (needed to translate the actions)
             buttonEvents = {
                 "up-button": ["move-up"],
                 "down-button": ["move-down"],
@@ -1806,41 +1999,49 @@ var indieGameEvents = (function () {
 
             };
 
+            //adds the direction buttons to the touch overlay (also set the style [positioning])
             dom.directionButtons.wrapper.className += 'direction-buttons-wrapper';
             setTouchDirectionButtonsStyle(dom, directionButtonSize, directionButtonMargin, events);
             dom.overlay.appendChild(dom.directionButtons.wrapper);
+
+            //starts the translation for the touch button movement actions
             translateDirectionButtonEvents(dom.directionButtons.wrapper, buttonEvents, canvas, indieGameEventsObject);
 
-            //hide direction buttons at the beginning until no gyrosope is detected
+            //hide direction buttons at the beginning until no gyrosope is detected when gyroscope mode is activated in the settings
             if(indieGameEventsObject.settings.useGyroscope) {
                 dom.directionButtons.wrapper.style.display = 'none';
             }
         }
 
+        //adds action buttons to the overlay if the corresponding action is set by the user for the abstraction
         if ((events.indexOf('action-1') !== -1) || events.indexOf('action-2') !== -1 || events.indexOf('action-3') !== -1 || events.indexOf('action-4') !== -1) {
             var smallestActionButtonValue = 70, highestActionButtonValue = 140, actionButtonSize;
 
+            //set the right size for the buttons
             actionButtonSize = Math.min(Math.max(smallestActionButtonValue, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), highestActionButtonValue);
 
+            //if the orientation is on portrait then calculate the button size differently
             if(overlayRectSize.width < overlayRectSize.height) {
                 actionButtonSize = Math.min(Math.min(smallestActionButtonValue, overlayRectSize.height * 0.14), highestActionButtonValue);
             }
 
-            //console.log(actionButtonSize);
 
+            //creates the wrapper for the action buttons
             dom.actionButtons = {};
             dom.actionButtons.wrapper = document.createElement('div');
             dom.actionButtons.wrapper.className += 'action-buttons-wrapper';
 
+            //action one
             if (events.indexOf('action-1') !== -1) {
-                dom.actionButtons.action1 = document.createElement('button');
-                dom.actionButtons.action1.name = 'action-1';
+                dom.actionButtons.action1 = document.createElement('button'); //creates the butotn element
+                dom.actionButtons.action1.name = 'action-1';                    //names the button element for the action
                 dom.actionButtons.action1.className += 'action-1-button';
-                dom.actionButtons.action1.innerHTML += "1";
+                dom.actionButtons.action1.innerHTML += "1";                     //sets an lable for the button (1 for action one)
 
                 dom.actionButtons.wrapper.appendChild(dom.actionButtons.action1);
             }
 
+            //action two
             if (events.indexOf('action-2') !== -1) {
                 dom.actionButtons.action2 = document.createElement('button');
                 dom.actionButtons.action2.name = 'action-2';
@@ -1850,6 +2051,7 @@ var indieGameEvents = (function () {
                 dom.actionButtons.wrapper.appendChild(dom.actionButtons.action2);
             }
 
+            //action three
             if (events.indexOf('action-3') !== -1) {
                 dom.actionButtons.action3 = document.createElement('button');
                 dom.actionButtons.action3.name = 'action-3';
@@ -1859,6 +2061,7 @@ var indieGameEvents = (function () {
                 dom.actionButtons.wrapper.appendChild(dom.actionButtons.action3);
             }
 
+            //action four
             if (events.indexOf('action-4') !== -1) {
                 dom.actionButtons.action4 = document.createElement('button');
                 dom.actionButtons.action4.name = 'action-4';
@@ -1868,18 +2071,22 @@ var indieGameEvents = (function () {
                 dom.actionButtons.wrapper.appendChild(dom.actionButtons.action4);
             }
 
-
+            //sets the style for the touch buttons (mostly positioning things) and adds the buttons to the overlay
             setActionButtonsStyle(dom.actionButtons, actionButtonSize, directionButtonMargin);
             dom.overlay.appendChild(dom.actionButtons.wrapper);
+
+            //starts the translation of the touch button user actions
             translateActionButtonEvents(dom.actionButtons.wrapper, canvas, indieGameEventsObject);
         }
 
+        //adss the open map button if the corresponding event is selected by the user in the settings
         if (events.indexOf('open-map') !== -1) {
             var mapButtonSize, minMapButtonSize = 60, maxMapButtonSize = 130, mapButtonPosition;
 
+            //sets the size
             mapButtonSize = ~~Math.min(Math.max(minMapButtonSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), maxMapButtonSize);
 
-
+            //sets the position (different on portrait and landscape)
             if (overlayRectSize.height < overlayRectSize.width - 200 && overlayRectSize.width > 600) {
                 mapButtonPosition = {left: overlayRectSize.width / 2 - mapButtonSize - 10, bottom: 20};
             }
@@ -1891,6 +2098,7 @@ var indieGameEvents = (function () {
                 };
             }
 
+            //creates the element
             dom.mapButton = document.createElement('button');
             dom.mapButton.className += 'map-button';
             dom.mapButton.innerHTML += "M";
@@ -1903,8 +2111,10 @@ var indieGameEvents = (function () {
                 "pointer-events: all; position: absolute; color: white; background-color: black; opacity: 0.5; border: none;"
             );
 
+            //adds the element to the touch overlay
             dom.overlay.appendChild(dom.mapButton);
 
+            //starts translating the button action to uniformal events
             if (isTouchDevice()) {
                 dom.mapButton.addEventListener('touchstart', function (e) {
                     mapButtonStartAction(e, canvas, events, dom)
@@ -1920,16 +2130,19 @@ var indieGameEvents = (function () {
             }
         }
 
-
+        //dismiss button
         if (events.indexOf('dismiss') !== -1 && indieGameEventsObject.settings.touchDismissButton) {
             var dismissButtonSize, dismissButtonMinSize = 60, dismissButtonMaxSize = 130;
 
+            //size
             dismissButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
 
+            //creates the button
             dom.dismissButton = document.createElement('button');
             dom.dismissButton.className += 'dismiss-button';
             dom.dismissButton.innerHTML += "X";
 
+            //sets the style
             dom.dismissButton.setAttribute('style',
                 "width:" + dismissButtonSize + "px; " +
                 "height:" + dismissButtonSize + "px; " +
@@ -1939,9 +2152,11 @@ var indieGameEvents = (function () {
                 "pointer-events: all; position: absolute; color: white; background-color: black; opacity: 0.5; border: none; z-index: 210; display: none;"
             );
 
+            //adds the button to the overlay
             dom.overlay.appendChild(dom.dismissButton);
             //document.body.appendChild(dom.dismissButton);
 
+            //starts translating the button action
             if (isTouchDevice()) {
                 dom.dismissButton.addEventListener('touchstart', function (e) {
                     dismissButtonAction(e, canvas, dom)
@@ -1957,12 +2172,14 @@ var indieGameEvents = (function () {
             }
         }
 
-
+        //menu button
         if (events.indexOf('open-menu') && indieGameEventsObject.settings.menuButton) {
             var menuButtonSize, menuButtonMinSize = 60, menuButtonMaxSize = 130, menuButtonPosition;
 
+            //size
             menuButtonSize = ~~Math.min(Math.max(dismissButtonMinSize, Math.min(overlayRectSize.width * 0.14, overlayRectSize.height * 0.14)), dismissButtonMaxSize);
 
+            //position
             if (overlayRectSize.height < overlayRectSize.width  - 200 && overlayRectSize.width > 600) {
                 menuButtonPosition = {left: overlayRectSize.width / 2 + 10, bottom: 20};
             }
@@ -1974,10 +2191,12 @@ var indieGameEvents = (function () {
                 };
             }
 
+            //creates the element
             dom.menuButton = document.createElement('button');
             dom.menuButton.className += 'menu-button';
             dom.menuButton.innerHTML += "&#9776;";                                                   //hamburger symbol: &#9776;
 
+            //set style
             dom.menuButton.setAttribute('style',
                 "width:" + menuButtonSize + "px; " +
                 "height:" + menuButtonSize + "px; " +
@@ -1987,8 +2206,10 @@ var indieGameEvents = (function () {
                 "pointer-events: all; position: absolute; color: white; background-color: black; opacity: 0.5; border: none;"
             );
 
+            //adding to overlay
             dom.overlay.appendChild(dom.menuButton);
 
+            //starting translating actions (pointer and touch API is supported)
             if (isTouchDevice()) {
                 dom.menuButton.addEventListener('touchstart', function (e) {
                     menuButtonStartAction(e, canvas, dom, events)
@@ -2006,25 +2227,33 @@ var indieGameEvents = (function () {
 
 
         dom.overlay.addEventListener("touchend", function (e) {
+            //prevent default on touch api
             e.preventDefault();
         });
 
-        document.body.appendChild(dom.overlay);                                                     //appends the interface directly in the body tag to prevent position relative interference
+        //appends the interface directly in the body tag to prevent position relative interference
+        document.body.appendChild(dom.overlay);
 
     }
 
-    //on fullscreen change position of canvas
+    /*on fullscreen mode, change position of canvas overlay (and also the z-index)
+     * @param dom: helds all dom elements from the library
+     * @param canvas: current canvas
+     */
     function touchInterfaceFullscreenHandler(dom, canvas) {
         var canvasPosRect;
 
+        //after 100ms
         setTimeout(function () {
             canvasPosRect  = canvas.getBoundingClientRect();
 
+            //overlay has max z index then reset the z index and reposition the canvas
             if (parseInt(dom.overlay.style.zIndex) === 2147483647) {   //2147483647 is the max z-index value
                 dom.overlay.style.zIndex = dom.overlay.oldStyle.zIndex;
                 dom.overlay.style.top = canvasPosRect.top + "px";
                 dom.overlay.style.left = canvasPosRect.left + "px";
             } else {
+                //else set the max z-index and reposition the canvas
                 dom.overlay.oldStyle = JSON.parse(JSON.stringify(dom.overlay.style));
                 dom.overlay.style.zIndex = 2147483647;
                 dom.overlay.style.top = canvasPosRect.top + "px";
@@ -2033,31 +2262,49 @@ var indieGameEvents = (function () {
         }, 100);
     }
 
+    /* When the menu button is clicked
+     * @param e: Event object
+     * @param canvas: current canvas
+     * @param dom: all dom elements creaated for this abstraction
+     * @param events: user set events (or default setting event array)
+     */
     function menuButtonStartAction(e, canvas, dom, events) {
+        //gets the right target (function is needed because different APIs are in use to get the target
         var target = prepareTarget(e);
 
+        //if the target is a button
         if (target instanceof HTMLButtonElement) {
+            //creates the open menu event, dispatches it and hides the menu button
             canvas.dispatchEvent(new CustomEvent('open-menu'));
             dom.menuButton.style.display = 'none';
 
+           //also hides the map button, to hide the remaining touch interface objects use canvas.hideIndieGameTouchInterfaceWithoutX();
             if (dom.mapButton) {
-                dom.mapButton.style.display = 'none';                                   //also hides the menu button, to hide the remaining touch interface objects use canvas.hideIndieGameTouchInterfaceWithoutX();
+                dom.mapButton.style.display = 'none';
             }
 
+            //shows the dismiss button automatically
             if (events.indexOf('dismiss') !== -1 && dom.dismissButton) {
                 dom.dismissButton.style.display = 'block';
             }
         }
     }
 
-
+    /* When the dismiss button is clicked
+     * @param e: Event object
+     * @param canvas: current canvas
+     * @param dom: all dom elements creaated for this abstraction
+     */
     function dismissButtonAction(e, canvas, dom) {
         var target = prepareTarget(e);
 
+        //dispatches the uniformal dismiss event
         if (target instanceof HTMLButtonElement) {
             canvas.dispatchEvent(new CustomEvent('dismiss'));
+            //hides the dismiss button
             dom.dismissButton.style.display = 'none';
 
+            //shows the menu and map buttons
             if (dom.mapButton) {
                 dom.mapButton.style.display = 'block';
             }
@@ -2067,39 +2314,59 @@ var indieGameEvents = (function () {
         }
     }
 
+    /* When the open-map button is clicked
+     * @param e: Event object
+     * @param canvas: current canvas
+     * @param dom: all dom elements creaated for this abstraction
+     */
     function mapButtonStartAction(e, canvas, events, dom) {
         var target = prepareTarget(e);
 
+        //creates and dispatches the event
         if (target instanceof HTMLButtonElement) {
             canvas.dispatchEvent(new CustomEvent('open-map'));
 
+            //hides the map-button
             dom.mapButton.style.display = 'none';
 
             //if(dom.menuButton) {dom.menuButton.style.display = 'none'};
 
+            //shows the dismiss button
             if (events.indexOf('dismiss') !== -1 && dom.dismissButton) {
                 dom.dismissButton.style.display = 'block';
             }
         }
     }
 
-
+    /* Sets the styles for the action buttons of the touch overlay
+     * @param actionButtons: action buttons dom wrapper element
+     * @param actionsButtonSize: size how big the action buttons should be
+     */
     function setActionButtonsStyle(actionButtons, actionButtonSize) {
         var key, i = 0, positions, normalButtonSize;
 
+        //sets the default size for the action buttons (variates on how many buttons are visible -> how many action events are needed by the user)
         normalButtonSize = actionButtonSize;
 
+        //if only action 1 and action 2 are set by the user for the recogniztion
         if (actionButtons.action1 && actionButtons.action2 && !actionButtons.action3 && !actionButtons.action4) {
+            //bigger button size
             actionButtonSize *= 1.2;
+            //sets the position relative to the button overlay of the two buttons
             positions = [{top: actionButtonSize * 1.5, left: 0}, {
                 top: actionButtonSize / 1.5,
                 left: actionButtonSize * 1.5
             }];
         }
+        //else if two buttons are needed by the user
         else if (countPropertiesInObject(actionButtons) === 2) {
+            //bigger button size
             actionButtonSize *= 1.5;
+            //sets the position relative to the button overlay
             positions = [{top: actionButtonSize, left: actionButtonSize / 2}];
         }
+
+        //else dont set another button size, only set the position of the buttons relative to the button overlay
         else {
             positions = [{top: actionButtonSize * 2, left: actionButtonSize}, {
                 top: actionButtonSize,
@@ -2107,6 +2374,7 @@ var indieGameEvents = (function () {
             }, {top: actionButtonSize, left: actionButtonSize * 2}, {top: 0, left: actionButtonSize}]
         }
 
+        //sets the styles (with the calculated sizes and positions for the buttons)
         for (key in actionButtons) {
             if (actionButtons.hasOwnProperty(key) && actionButtons[key] instanceof HTMLButtonElement) {
                 actionButtons[key].setAttribute('style',
@@ -2123,18 +2391,26 @@ var indieGameEvents = (function () {
             }
         }
 
+        //resets the action button size for the button wrapper
         actionButtonSize = normalButtonSize;
 
+        //sets the style of the button wrapper (depending of the initial buttons size)
         actionButtons.wrapper.setAttribute('style',
             "position: absolute; " +
-            "width:" + actionButtonSize * 3 + "px; " +
+            "width:" + actionButtonSize * 3 + "px; " +         //size
             "height:" + actionButtonSize * 3 + "px;" +
-            "bottom:" + 30 + "px;" +
+            "bottom:" + 30 + "px;" +                        //relative position to the touch overlay
             "right:" + 35 + "px"
         );
     }
 
+    /* translates the user actions of the action buttons, uses touch and pointer API
+     * @param buttonField: wrapper containing the buttons
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function translateActionButtonEvents(buttonField, canvas, indieGameEventsObject) {
+        //only if the device has touch
         if (isTouchDevice()) {
             buttonField.addEventListener('touchstart', function (e) {
                 actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject)
@@ -2159,9 +2435,17 @@ var indieGameEvents = (function () {
         }
     }
 
+    /* when the user started touching an action button
+     * @param e: eventObject
+     * @param buttonField: wrapper containing the buttons
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function actionTouchButtonStartAction(e, buttonField, canvas, indieGameEventsObject) {
         var targets = {}, i;
 
+        //different apis have different access to the main target objects
+        //gets the targets of the touch points
         if (e.changedTouches[0].target) {
             i = 0;
             for (var touch in e.changedTouches) {
@@ -2174,9 +2458,13 @@ var indieGameEvents = (function () {
             targets[0] = e.target;
         }
 
+        //for every target
         for (var target in targets) {
             if (targets.hasOwnProperty(target)) {
+                //start dispatching the corresponding events for the targets (the name property is here used to get the right action from the buttons)
+                //saves the state in the eventStates array
                 indieGameEventsObject.eventStates[targets[target].name] = true;
+                //dispatch loop (every frame until the button will be released)
                 targets[target].buttonPressed = window.requestAnimationFrame(function () {
                     actionTouchButtonEventDispatchLoop(targets[target], buttonField, canvas)
                 });
@@ -2185,23 +2473,38 @@ var indieGameEvents = (function () {
         }
     }
 
+    /* event dispatch loop for the action buttons, when one is held down by the user
+     * @param target: targetElement - touched dom element
+     * @param buttonField: wrapper containing the buttons
+     * @param canvas: current canvas
+     */
     function actionTouchButtonEventDispatchLoop(target, buttonField ,canvas) {
         var event;
 
+        //if the element is a button and has an action name
         if (target instanceof HTMLButtonElement && target.name) {
+            //dispatch the corresponding action
             event = new CustomEvent(target.name);
-            event.strength = 100;
+            event.strength = 100;                   //no gradation, use max strength
             canvas.dispatchEvent(event);
 
+            //keep loop running if the button is still pressed
             if(target.buttonPressed){
                 target.buttonPressed = window.requestAnimationFrame(function () {actionTouchButtonEventDispatchLoop(target, buttonField, canvas)});
             }
         }
     }
 
+    /* when the user releases a touch butotn
+     * @param e: eventObject
+     * @param buttonField: wrapper containing the buttons
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+     */
     function actionTouchButtonEndAction(e, buttonField, canvas, indieGameEventsObject) {
         var targets = {}, i;
 
+        //gets the targets right (because we are using different APIs for that event handler
         if(e.changedTouches[0].target) {
             i = 0;
             for(var touch in e.changedTouches) {
@@ -2214,10 +2517,11 @@ var indieGameEvents = (function () {
             targets[0] = e.target;
         }
 
-        //cancel all event frame loops
+        //cancel all event frame loops from the action button with all targets that were released
         for(var target in targets) {
             if(targets.hasOwnProperty(target)) {
                 if (targets[target].buttonPressed) {
+                    //also set the eventStaate array to false again
                     indieGameEventsObject.eventStates[targets[target].name] = false;
                     window.cancelAnimationFrame(targets[target].buttonPressed);
                     targets[target].buttonPressed = false;
@@ -2226,7 +2530,10 @@ var indieGameEvents = (function () {
         }
     }
 
-
+    /* sets the style for the touch overlay to fit perfect over the canvas
+     * @param overlayRectSize: size and position of the underlying canvas
+     * @param dom: dom elements created for the current abstraction
+     */
     function setTouchOverlayStyle(overlayRectSize, dom) {
         //sets the style for the interface overlay
         dom.overlay.setAttribute("style",
@@ -2240,7 +2547,12 @@ var indieGameEvents = (function () {
         );
     }
 
+    /* sets the style for the virtual joystick on the overlay (position and size mostly)
+     * @param dom: dom elements created for the current abstraction
+     * @param joystickSize: size the joystick should have
+     */
     function setJoystickStyle(dom, joystickSize) {
+        //wrapper
         dom.joystick.wrapper.setAttribute("style",
             "position: absolute; " +
             "width:" + joystickSize + "px; " +
@@ -2250,21 +2562,30 @@ var indieGameEvents = (function () {
             "border-radius: 50%;"
         );
 
+        //outer circle
         dom.joystick.outerCircle.setAttribute("style", "pointer-events: all; border-radius: 50%; width: 100%; height: 100%; position: absolute; background: black; opacity: 0.4;");                  //joystick values can be styled from outside with !important
+        //inner circle in outer circle
         dom.joystick.innerCircle.setAttribute("style", "pointer-events: all; border-radius: 50%; width: 50%; height: 50%; position: absolute; background: black; opacity: 0.3; transform: translate(-50%, -50%); top: 50%; left:50%;");
     }
 
 
-    //joystick actions
+    /* starts the translation of the movement user actions of the virtual joystick (touch start (pointer down...) handler)
+     * @param e: eventObject
+     * @param canvas: current canvas
+     * @param indieGameEventsObject: abstraction object
+    */
     function joystickTouchStartAction(e, canvas, indieGameEventsObject) {
+        //gets all relevant data out of the touch start (pointer down...) event (like position
         var data = getJoystickTouchData(e);
 
-        //out of bounce check
+        //out of bounce check (if touch takes place in outer circle)
         if (data.yPos > 0 && data.yPos < data.parentPosition.height && data.xPos > 0 && data.xPos < data.parentPosition.width) {
+            //set the inner circle position to the touch point position
             data.innerCircle.style.left = data.xPos + "px";
             data.innerCircle.style.top = data.yPos + "px";
         }
 
+        //if there isnt already a dispatch loop for the joystick running, then start one
         if (!data.innerCircle.eventDispatchID) {
             data.innerCircle.eventDispatchID = window.requestAnimationFrame(function() {triggerJoystickDirectionEvents(data, canvas, indieGameEventsObject)});
         }
